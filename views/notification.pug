@@ -1,0 +1,9 @@
+extends layout
+block scripts
+    script(type='text/javascript' src='/commons.js')
+    script(type='text/javascript' src='/authBundle.js')
+block content
+    h1#header1 Travel Plan
+    a#planhome(href='/plans') Travel plan home
+    div#msgbox
+        div#msg= message

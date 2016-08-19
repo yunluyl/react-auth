@@ -1,0 +1,36 @@
+.form
+{
+	color : red;
+}
+
+.closeForm
+{
+	@extend .form;
+	display : none;
+}
+
+.openForm
+{
+	@extend .form;
+	display : block;
+}
+
+.nameMsg
+{
+	display : inline-block;
+}
+
+.startMsg
+{
+	display : inline-block;
+}
+
+.endMsg
+{
+	display : inline-block;
+}
+
+.errorMsg
+{
+
+}

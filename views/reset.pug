@@ -1,0 +1,17 @@
+extends layout
+block scripts
+    script(type='text/javascript' src='/commons.js')
+    script(type='text/javascript' src='/authBundle.js')
+    script(type='text/javascript' src='https://www.google.com/recaptcha/api.js' defer)
+block content
+    form#reset(name='reset' action='/reset' method='post')
+        div
+            label Email address:
+            input(type='text' name='_id')
+        - if (captcha)
+        - {
+            div.g-recaptcha(data-sitekey='6LeF6R4TAAAAAONP0EH3UOTa3MRyzCbSRbM8OCUk')
+        - }
+        div
+            input(type='submit' value='Submit')
+        div= message

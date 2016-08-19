@@ -1,0 +1,2 @@
+#!/bin/bash
+mongo ds021681.mlab.com:21681/heroku_fz6x4768 -u luyun198993 -p Ky63624507*
