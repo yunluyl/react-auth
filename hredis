@@ -1,2 +1,0 @@
-#!/bin/bash
-redis-cli -h pub-redis-13073.us-east-1-2.1.ec2.garantiadata.com -p 13073 -a Ky63624507*
