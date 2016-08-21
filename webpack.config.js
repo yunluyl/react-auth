@@ -8,7 +8,7 @@ module.exports =
     devtool : 'sourcemap',
     entry :
     {
-        'bundle' : './src/app.jsx'
+        'bundle' : './test/app.jsx'
     },
     output :
     {

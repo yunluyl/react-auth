@@ -7,7 +7,7 @@
     "npm": "3.8.3"
   },
   "scripts": {
-    "start": "./serverStart"
+    "test" : "webpack --progress && node ./test/server.js"
   },
   "dependencies": {
     "async": "2.0.0-rc.3",

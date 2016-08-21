@@ -14,18 +14,18 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.set('trust proxy', 1);
 app.use(express.static(path.join(__dirname, 'public')));
 
-const config =
+const userConfig =
 {
-	path : '/api',
-	secret : '123456'
-};
+	sessionSecret : '654321',
+	authPath : '/auth'
+}
 
-reactAuth(config, app);
+reactAuth(userConfig, app);
 
 const options =
 {
-	key : fs.readFileSync('../certs/server.key'),
-	cert : fs.readFileSync('../certs/server.cert')
+	key : fs.readFileSync('./certs/server.key'),
+	cert : fs.readFileSync('./certs/server.cert')
 };
 
 const server = https.createServer(options, app);

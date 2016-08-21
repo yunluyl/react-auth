@@ -64,7 +64,9 @@ var consts = module.exports =
     maxReqBeforeCaptcha : 6,
     userSessionMaxAge : 604800000,
     maxInputTextLength : 200,
-    imageServerAddr : 'https://s3.amazonaws.com/travelplanserver'
+    imageServerAddr : 'https://s3.amazonaws.com/travelplanserver',
+    authPath : '/api',
+    sessionSecret : '123456'
 };
 
 module.exports.message = {

@@ -7,8 +7,15 @@ const authApi = require('./api-router');
 const auth = require('./auth');
 const configFile = require('./config');
 
-module.exports = function(config, app)
+module.exports = function(userConfig, app)
 {
+    for (var key in userConfig)
+    {
+        if (userConfig.hasOwnProperty(key))
+        {
+            configFile[key] = userConfig[key];
+        }
+    }
     mongoose.connect(process.env.PROD_MONGODB, {config : {autoIndex : true}});
     const db = mongoose.connection;
 
@@ -27,7 +34,7 @@ module.exports = function(config, app)
     passport.use(new localStrategy({usernameField : '_id', passwordField : 'pw'}, auth.checkAuth));
     const sessionMiddleware = session(
     {
-        secret: config.secret,
+        secret: configFile.sessionSecret,
         saveUninitialized: false,
         resave: true,
         rolling: true,
@@ -41,5 +48,5 @@ module.exports = function(config, app)
     passport.serializeUser(auth.serializeUser);
     passport.deserializeUser(auth.deserializeUser);
     
-    app.use(config.path, authApi);
+    app.use(configFile.authPath, authApi);
 };

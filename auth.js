@@ -39,53 +39,6 @@ function renderErr(req, res, errorMsg)
     });
 }
 
-//find if number of requests from the particular ip/username exceeds the limit
-function getReq(req)
-{
-    return new promise(function(resolve, reject)
-    {
-        ReqList.find(
-            {
-                _id : {$in : [req.body._id, req.ip]},
-                fq : {$gte : config.maxReqBeforeCaptcha}
-            },
-            {fq : 1}
-        ).lean().exec(function(err, data)
-        {
-            if (err)
-            {
-                reject(new Error(config.message.getItem));
-            }
-            else
-            {
-                resolve(data);
-            }
-        })
-    });
-}
-
-function checkCaptcha(req, res)
-{
-    getReq(req)
-    .then(function(data)
-    {
-        if (data.length > 0)
-        {
-            res.status(200).send({recap : true});
-        }
-        else
-        {
-            res.status(200).send({recap : false});
-        }
-    })
-    .catch(function(err)
-    {
-        res.status(500).send({msg : err.message});
-    });
-}
-
-module.exports.checkCaptcha = checkCaptcha;
-
 //verify the recaptcha value submitted by the user is correct
 function verifyCaptcha(req)
 {
@@ -122,159 +75,6 @@ function verifyCaptcha(req)
         });
         post_req.write(post_data);
         post_req.end();
-    });
-}
-
-//database access for recording number of requests
-function reqLimit(req, res, reportErr, startAuth, next)
-{
-    ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().exec(function(err1, data1)
-    {
-        if (err1)
-        {
-            reportErr(req, res, 'getItem');
-        }
-        else
-        {
-            switch (data1.length)
-            {
-                case 0:
-                    ReqList.create([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}], function(err2, data2)
-                    {
-                        if (err2)
-                        {
-                            reportErr(req, res, 'putItem');
-                        }
-                        else
-                        {
-                            startAuth(req, res, false, next);
-                        }
-                    });
-                    break;
-                case 1:
-                    if (data1[0]._id === req.ip)
-                    {
-                        async.parallel([function(callback)
-                        {
-                            ReqList.update({_id : req.ip}, {$inc : {fq : 1}}, function(err3, data3)
-                            {
-                                if (err3 || data3.nModified !== 1)
-                                {
-                                    callback(err3 || data3);
-                                }
-                                else
-                                {
-                                    callback(null, data3);
-                                }
-                            });
-                        }, function(callback)
-                        {
-                            ReqList.create({_id : req.body._id, fq : 1}, function(err4, data4)
-                            {
-                                if (err4)
-                                {
-                                    callback(err4);
-                                }
-                                else
-                                {
-                                    callback(null, data4);
-                                }
-                            });
-                        }], function(err5, data5)
-                        {
-                            if (err5)
-                            {
-                                reportErr(req, res, 'putItem');
-                            }
-                            else
-                            {
-                                if (data1[0].fq >= config.maxReqBeforeCaptcha)
-                                {
-                                    startAuth(req, res, true, next);
-                                }
-                                else
-                                {
-                                    startAuth(req, res, false, next);
-                                }
-                            }
-                        });
-                    }
-                    else if (data1[0]._id === req.body._id)
-                    {
-                        async.parallel([function(callback)
-                        {
-                            ReqList.update({_id : req.body._id}, {$inc : {fq : 1}}, function(err3, data3)
-                            {
-                                if (err3 || data3.nModified !== 1)
-                                {
-                                    callback(err3 || data3);
-                                }
-                                else
-                                {
-                                    callback(null, data3);
-                                }
-                            });
-                        }, function(callback)
-                        {
-                            ReqList.create({_id : req.ip, fq : 1}, function(err4, data4)
-                            {
-                                if (err4)
-                                {
-                                    callback(err4);
-                                }
-                                else
-                                {
-                                    callback(null, data4);
-                                }
-                            });
-                        }], function(err5, data5)
-                        {
-                            if (err5)
-                            {
-                                reportErr(req, res, 'putItem');
-                            }
-                            else
-                            {
-                                if (data1[0].fq >= config.maxReqBeforeCaptcha)
-                                {
-                                    startAuth(req, res, true, next);
-                                }
-                                else
-                                {
-                                    startAuth(req, res, false, next);
-                                }
-                            }
-                        });
-                    }
-                    else
-                    {
-                        reportErr(req, res, 'getItem');
-                    }
-                    break;
-                case 2:
-                    ReqList.update({$or : [{_id : req.body._id},{_id : req.ip}]}, {$inc : {fq : 1}}, {multi : true}, function(err6, data6)
-                    {
-                        if (err6 || data6.nModified !== 2)
-                        {
-                            reportErr(req, res, 'editItem');
-                        }
-                        else
-                        {
-                            if (data1[0].fq >= config.maxReqBeforeCaptcha || data1[1].fq >= config.maxReqBeforeCaptcha)
-                            {
-                                startAuth(req, res, true, next);
-                            }
-                            else
-                            {
-                                startAuth(req, res, false, next);
-                            }
-                        }
-                    })
-                    break;
-                default:
-                    reportErr(req, res, 'getItem');
-            }
-        }
     });
 }
 
@@ -934,35 +734,19 @@ module.exports.changePassword = function(req, res)
 //logout
 module.exports.logout = function(req, res)
 {
-    if (req.user)
+    req.session.destroy(function(err1)
     {
-        req.session.destroy(function(err1)
+        if (err1) 
         {
-            if (err1) 
+            res.status(500).send(
             {
-                res.status(500).send(
-                {
-                    msg : config.message.destroySessionErr
-                });
-                //res.redirect(302, '/plans?logoutMsg=destroySessionErr');
-            }
-            else
-            {
-                res.status(200).send(
-                {
-                    redirect : '/'
-                });
-                //res.redirect('/');
-            }
-        });
-    }
-    else
-    {
-        res.status(200).send(
+                err : 'destroySessionErr',
+                msg : config.message.destroySessionErr
+            });
+        }
+        else
         {
-            redirect : '/login',
-            msg : config.message.notLoggedIn
-        });
-        //res.redirect(302, '/login?err=notLoggedIn'); //redirect to user login
-    }
+            res.status(200).send();
+        }
+    });
 }
