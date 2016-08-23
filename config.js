@@ -14,44 +14,8 @@ var reqlistSchema = new Schema({
     fq : Number
 }, {timestamps : true, collection : 'req'});
 
-var planSchema = new Schema({
-    name : String,
-    start : Date,
-    end : Date,
-    ct : {type : Date, default : Date.now},
-    users : [String]
-}, {collection : 'plan'});
-
-var user2planSchema = new Schema({
-    user : {type : String, index : true},
-    plan : String
-}, {collection : 'usr2pla'});
-
-var pitemSchema = new Schema(
-{
-    plan : {type : String, index : true},
-    title : String,
-    loc : [Number],
-    addr : String,
-    city : String,
-    state : String,
-    zip : String,
-    country : String,
-    day : Number, //default 0
-    time : Number, //in minutes, default 0
-    len : Number,
-    star : Boolean,
-    trash : Boolean,
-    added : Number,
-    image : [String],
-    desc : [String]
-}, {timestamps : true, collection : 'pitem'});
-
 mongoose.model('User', userSchema);
 mongoose.model('ReqList', reqlistSchema);
-mongoose.model('Plan', planSchema);
-mongoose.model('Usr2pla', user2planSchema);
-mongoose.model('Pitem', pitemSchema);
 
 var consts = module.exports =
 {
@@ -61,7 +25,8 @@ var consts = module.exports =
     tempPasswordExpireTime : 300000,  //unit: ms
     toobusyMaxLag : 70,
     toobusyCheckInterval : 500,
-    maxReqBeforeCaptcha : 6,
+    maxReqFromSameIP : 6,
+    maxReqFromSameUser : 6,
     userSessionMaxAge : 604800000,
     maxInputTextLength : 200,
     imageServerAddr : 'https://s3.amazonaws.com/travelplanserver',
@@ -92,7 +57,8 @@ module.exports.message = {
     passwordChanged:'Password has been changed successfully',
     captchaVerifyFailed: 'The non-bot checking failed',
     captchaRequestErr: 'Internal error occured whiling requesting for captcha verification',
-    tooManyAccess: 'Accessed too many times, please check the non-bot test',
+    tooManyRequestIP: 'Requested too many times from the same IP, please wait',
+    tooManyRequestUser: 'Requested too many times from the same user, please wait',
     inputTextTooLong: 'The input text is too long',
     domain: 'travelplanserver.herokuapp.com',
     notPlanOwner: 'ERROR: You are not authorized to add users to the plan',

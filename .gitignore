@@ -6,3 +6,4 @@ src/node_modules/
 npm-debug.log
 .DS_Store
 sftp-config.json
+*.sublime-project
