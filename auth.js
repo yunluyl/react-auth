@@ -1,184 +1,146 @@
 var passport = require('passport');
 var bcrypt = require('bcryptjs');
 var nodemailer = require('nodemailer');
+var transporter = nodemailer.createTransport(config.smtpConfig);
 var uuid = require('node-uuid');
 var config = require('./config');
-var transporter = nodemailer.createTransport(config.smtpConfig);
-var mongoose = require('mongoose');
 var User = mongoose.model('User');
-var async = require('async');
 var querystring = require('querystring');
 var https = require('https');
 var promise = require('bluebird');
+var mongoose = promise.promisifyAll(require('mongoose'));
 var ReqList = mongoose.model('ReqList');
 
 //database access for recording number of requests
 function reqLimit(req, res)
 {
-    ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().exec(function(err1, data1)
+    ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().execAsync()
+    .then(function(data)
     {
-        if (err1)
+        switch (data.length)
         {
-            return reportErr(res, 500, 'getItem');
-        }
-        else
-        {
-            switch (data1.length)
-            {
-                case 0:
-                    ReqList.create([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}], function(err2, data2)
+            case 0:
+                ReqList.createAsync([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}])
+                .catch(function(e)
+                {
+                    return reportErr(res, 'putItem');
+                });
+                break;
+            case 1:
+                if (data[0]._id === req.ip)
+                {
+                    if (data[0].fq >= config.maxReqFromSameIP)
                     {
-                        if (err2)
+                        return reportErr(res, 'tooManyRequestIP');
+                    }
+                    promise.join(
+                        ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}}),
+                        ReqList.createAsync({_id : req.body._id, fq : 1}),
+                        function(data1, data2)
                         {
-                            return reportErr(res, 500, 'putItem');
+                            if (data1.nModified !== 1)
+                            {
+                                throw new Error();
+                            }
                         }
+                    )
+                    .catch(function(e)
+                    {
+                        return reportErr(res, 'putItem')
                     });
-                    break;
-                case 1:
-                    if (data1[0]._id === req.ip)
+                }
+                else if (data[0]._id === req.body._id)
+                {
+                    if (data[0].fq >= config.maxReqFromSameUser)
                     {
-                        async.parallel([function(callback)
-                        {
-                            ReqList.update({_id : req.ip}, {$inc : {fq : 1}}, function(err3, data3)
-                            {
-                                if (err3 || data3.nModified !== 1)
-                                {
-                                    callback(err3 || data3);
-                                }
-                                else
-                                {
-                                    callback(null, data3);
-                                }
-                            });
-                        }, function(callback)
-                        {
-                            ReqList.create({_id : req.body._id, fq : 1}, function(err4, data4)
-                            {
-                                if (err4)
-                                {
-                                    callback(err4);
-                                }
-                                else
-                                {
-                                    callback(null, data4);
-                                }
-                            });
-                        }], function(err5, data5)
-                        {
-                            if (err5)
-                            {
-                                return reportErr(res, 500, 'putItem');
-                            }
-                            else
-                            {
-                                if (data1[0].fq >= config.maxReqFromSameIP)
-                                {
-                                    return reportErr(res, 400, 'tooManyRequestIP');
-                                }
-                            }
-                        });
+                        return reportErr(res, 'tooManyRequestUser');
                     }
-                    else if (data1[0]._id === req.body._id)
-                    {
-                        async.parallel([function(callback)
+                    promise.join(
+                        ReqList.updateAsync({_id : req.body._id}, {$inc : {fq : 1}}),
+                        ReqList.createAsync({_id : req.ip, fq : 1},
+                        function(data1, data2)
                         {
-                            ReqList.update({_id : req.body._id}, {$inc : {fq : 1}}, function(err3, data3)
+                            if (data1.nModified !== 1)
                             {
-                                if (err3 || data3.nModified !== 1)
-                                {
-                                    callback(err3 || data3);
-                                }
-                                else
-                                {
-                                    callback(null, data3);
-                                }
-                            });
-                        }, function(callback)
-                        {
-                            ReqList.create({_id : req.ip, fq : 1}, function(err4, data4)
-                            {
-                                if (err4)
-                                {
-                                    callback(err4);
-                                }
-                                else
-                                {
-                                    callback(null, data4);
-                                }
-                            });
-                        }], function(err5, data5)
-                        {
-                            if (err5)
-                            {
-                                return reportErr(res, 500, 'putItem');
-                            }
-                            else
-                            {
-                                if (data1[0].fq >= config.maxReqFromSameUser)
-                                {
-                                    return reportErr(res, 400, 'tooManyRequestUser');
-                                }
-                            }
-                        });
-                    }
-                    else
-                    {
-                        return reportErr(res, 500, 'getItem');
-                    }
-                    break;
-                case 2:
-                    ReqList.update({$or : [{_id : req.body._id},{_id : req.ip}]}, {$inc : {fq : 1}}, {multi : true}, function(err6, data6)
-                    {
-                        if (err6 || data6.nModified !== 2)
-                        {
-                            return reportErr(res, 500, 'editItem');
-                        }
-                        else
-                        {
-                            if (data1[0]._id === req.body._id && data1[1]._id === req.ip)
-                            {
-                                if (data1[0].fq >= config.maxReqFromSameUser)
-                                {
-                                    return reportErr(res, 400, 'tooManyRequestUser');
-                                }
-                                if (data1[1].fq >= config.maxReqFromSameIP)
-                                {
-                                    return reportErr(res, 400, 'tooManyRequestIP');
-                                }
-                            }
-                            else if (data1[0]._id === req.ip && data1[1]._id === req.body._id)
-                            {
-                                if (data1[1].fq >= config.maxReqFromSameUser)
-                                {
-                                    return reportErr(res, 400, 'tooManyRequestUser');
-                                }
-                                if (data1[0].fq >= config.maxReqFromSameIP)
-                                {
-                                    return reportErr(res, 400, 'tooManyRequestIP');
-                                }
-                            }
-                            else
-                            {
-                                return reportErr(res, 500, 'editItem');
+                                throw new Error();
                             }
                         }
-                    })
-                    break;
-                default:
-                    reportErr(res, 500, 'getItem');
-            }
+                    )
+                    .catch(function(e)
+                    {
+                        return reportErr(res, 'putItem');
+                    });
+                }
+                else
+                {
+                    return reportErr(res, 'getItem');
+                }
+                break;
+            case 2:
+                if (data[0]._id === req.body._id && data[1]._id === req.ip)
+                {
+                    if (data[0].fq >= config.maxReqFromSameUser)
+                    {
+                        return reportErr(res, 'tooManyRequestUser');
+                    }
+                    if (data[1].fq >= config.maxReqFromSameIP)
+                    {
+                        return reportErr(res, 'tooManyRequestIP');
+                    }
+                }
+                else if (data[0]._id === req.ip && data[1]._id === req.body._id)
+                {
+                    if (data[1].fq >= config.maxReqFromSameUser)
+                    {
+                        return reportErr(res, 'tooManyRequestUser');
+                    }
+                    if (data[0].fq >= config.maxReqFromSameIP)
+                    {
+                        return reportErr(res, 'tooManyRequestIP');
+                    }
+                }
+                else
+                {
+                    return reportErr(res, 'editItem');
+                }
+                ReqList.updateAsync({$or : [{_id : req.body._id},{_id : req.ip}]}, {$inc : {fq : 1}}, {multi : true})
+                .then(function(data)
+                {
+                    if (data.nModified !== 2)
+                    {
+                        throw new Error();
+                    }
+                })
+                .catch(function(e)
+                {
+                    return reportErr(res, 'editItem');
+                });
+                break;
+            default:
+                return reportErr(res, 'getItem');
         }
-    });
+    })
+    .catch(function(e)
+    {
+        return reportErr(res, 'getItem')
+    })
 }
 
 ////Utility functions
 //centralized error report function
-function reportErr(res, statusCode, errorName)
+function reportErr(res, errorName)
 {
-    var message = config.message[errorName];
-    if (!message)
+    var message;
+    var statusCode;
+    if (typeof config.message[errorName] == 'undefined')
     {
         message = errorName;
+        statusCode = 500;
+    }
+    else
+    {
+        message = config.message[errorName].msg;
+        statusCode = config.message[errorName].status;
     }
     return res.status(statusCode).send({err : errorName, msg : message});
 }
