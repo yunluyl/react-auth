@@ -1,129 +1,149 @@
 var passport = require('passport');
 var bcrypt = require('bcryptjs');
+var config = require('./config');
 var nodemailer = require('nodemailer');
 var transporter = nodemailer.createTransport(config.smtpConfig);
 var uuid = require('node-uuid');
-var config = require('./config');
-var User = mongoose.model('User');
 var querystring = require('querystring');
 var https = require('https');
 var promise = require('bluebird');
 var mongoose = promise.promisifyAll(require('mongoose'));
+
+var User = mongoose.model('User');
 var ReqList = mongoose.model('ReqList');
 
 //database access for recording number of requests
 function reqLimit(req, res)
 {
-    ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().execAsync()
-    .then(function(data)
+    return new promise(function(resolve, reject)
     {
-        switch (data.length)
+        ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().execAsync()
+        .then(function(data)
         {
-            case 0:
-                ReqList.createAsync([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}])
-                .catch(function(e)
-                {
-                    return reportErr(res, 'putItem');
-                });
-                break;
-            case 1:
-                if (data[0]._id === req.ip)
-                {
-                    if (data[0].fq >= config.maxReqFromSameIP)
+            switch (data.length)
+            {
+                case 0:
+                    ReqList.createAsync([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}])
+                    .then(function(data)
                     {
-                        return reportErr(res, 'tooManyRequestIP');
-                    }
-                    promise.join(
-                        ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}}),
-                        ReqList.createAsync({_id : req.body._id, fq : 1}),
-                        function(data1, data2)
-                        {
-                            if (data1.nModified !== 1)
-                            {
-                                throw new Error();
-                            }
-                        }
-                    )
+                        resolve();
+                    })
                     .catch(function(e)
                     {
-                        return reportErr(res, 'putItem')
+                        reject(new Error('putItem'));
                     });
-                }
-                else if (data[0]._id === req.body._id)
-                {
-                    if (data[0].fq >= config.maxReqFromSameUser)
+                    break;
+                case 1:
+                    if (data[0]._id === req.ip)
                     {
-                        return reportErr(res, 'tooManyRequestUser');
-                    }
-                    promise.join(
-                        ReqList.updateAsync({_id : req.body._id}, {$inc : {fq : 1}}),
-                        ReqList.createAsync({_id : req.ip, fq : 1},
-                        function(data1, data2)
+                        if (data[0].fq >= config.maxReqFromSameIP)
                         {
-                            if (data1.nModified !== 1)
-                            {
-                                throw new Error();
-                            }
+                            reject(new Error('tooManyRequestIP'));
                         }
-                    )
+                        promise.join(
+                            ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}}),
+                            ReqList.createAsync({_id : req.body._id, fq : 1}),
+                            function(data1, data2)
+                            {
+                                if (data1.nModified !== 1)
+                                {
+                                    throw new Error();
+                                }
+                                else
+                                {
+                                    resolve();
+                                }
+                            }
+                        )
+                        .catch(function(e)
+                        {
+                            reject(new Error('putItem'));
+                        });
+                    }
+                    else if (data[0]._id === req.body._id)
+                    {
+                        if (data[0].fq >= config.maxReqFromSameUser)
+                        {
+                            reject(new Error('tooManyRequestUser'));
+                        }
+                        promise.join(
+                            ReqList.updateAsync({_id : req.body._id}, {$inc : {fq : 1}}),
+                            ReqList.createAsync({_id : req.ip, fq : 1}),
+                            function(data1, data2)
+                            {
+                                if (data1.nModified !== 1)
+                                {
+                                    throw new Error();
+                                }
+                                else
+                                {
+                                    resolve();
+                                }
+                            }
+                        )
+                        .catch(function(e)
+                        {
+                            reject(new Error('putItem'));
+                        });
+                    }
+                    else
+                    {
+                        reject(new Error('getItem'));
+                    }
+                    break;
+                case 2:
+                    if (data[0]._id === req.body._id && data[1]._id === req.ip)
+                    {
+                        if (data[0].fq >= config.maxReqFromSameUser)
+                        {
+                            reject(new Error('tooManyRequestUser'));
+                        }
+                        if (data[1].fq >= config.maxReqFromSameIP)
+                        {
+                            reject(new Error('tooManyRequestIP'));
+                        }
+                    }
+                    else if (data[0]._id === req.ip && data[1]._id === req.body._id)
+                    {
+                        if (data[1].fq >= config.maxReqFromSameUser)
+                        {
+                            reject(new Error('tooManyRequestUser'));
+                        }
+                        if (data[0].fq >= config.maxReqFromSameIP)
+                        {
+                            reject(new Error('tooManyRequestIP'));
+                        }
+                    }
+                    else
+                    {
+                        reject(new Error('editItem'));
+                    }
+                    ReqList.updateAsync({$or : [{_id : req.body._id},{_id : req.ip}]}, {$inc : {fq : 1}}, {multi : true})
+                    .then(function(data)
+                    {
+                        if (data.nModified !== 2)
+                        {
+                            throw new Error();
+                        }
+                        else
+                        {
+                            resolve();
+                        }
+                    })
                     .catch(function(e)
                     {
-                        return reportErr(res, 'putItem');
+                        reject(new Error('editItem'));
                     });
-                }
-                else
-                {
-                    return reportErr(res, 'getItem');
-                }
-                break;
-            case 2:
-                if (data[0]._id === req.body._id && data[1]._id === req.ip)
-                {
-                    if (data[0].fq >= config.maxReqFromSameUser)
-                    {
-                        return reportErr(res, 'tooManyRequestUser');
-                    }
-                    if (data[1].fq >= config.maxReqFromSameIP)
-                    {
-                        return reportErr(res, 'tooManyRequestIP');
-                    }
-                }
-                else if (data[0]._id === req.ip && data[1]._id === req.body._id)
-                {
-                    if (data[1].fq >= config.maxReqFromSameUser)
-                    {
-                        return reportErr(res, 'tooManyRequestUser');
-                    }
-                    if (data[0].fq >= config.maxReqFromSameIP)
-                    {
-                        return reportErr(res, 'tooManyRequestIP');
-                    }
-                }
-                else
-                {
-                    return reportErr(res, 'editItem');
-                }
-                ReqList.updateAsync({$or : [{_id : req.body._id},{_id : req.ip}]}, {$inc : {fq : 1}}, {multi : true})
-                .then(function(data)
-                {
-                    if (data.nModified !== 2)
-                    {
-                        throw new Error();
-                    }
-                })
-                .catch(function(e)
-                {
-                    return reportErr(res, 'editItem');
-                });
-                break;
-            default:
-                return reportErr(res, 'getItem');
-        }
-    })
-    .catch(function(e)
-    {
-        return reportErr(res, 'getItem')
-    })
+                    break;
+                default:
+                    reject(new Error('getItem'));
+            }
+        })
+        .catch(function(e)
+        {
+            reject(new Error('getItem'));
+        })
+    });
 }
 
 ////Utility functions
@@ -387,59 +407,34 @@ function signup(req, res, captcha)
     });
 }
 
-//login wrapper
+//login
 module.exports.login = function(req, res, next) 
+{
+    if (config.limitReqRate)
+    {
+        reqLimit(req, res)
+        .then(function()
+        {
+            loginLocal(req, res, next);
+        })
+        .catch(function(e)
+        {
+            return reportErr(res, e.message);
+        });
+    }
+    else
+    {
+        loginLocal(req, res, next);
+    }
+}
+
+//local login function
+function loginLocal(req, res, next)
 {
     if (req.body._id.length > config.maxInputTextLength || req.body.pw.length > config.maxInputTextLength)
     {
-        return renderErr(req, res, config.message.inputTextTooLong);
+        return reportErr(res, 'inputTextTooLong');
     }
-    reqLimit(req, res, renderErr, login, next);
-}
-
-//passport local strategy -- check user identity
-module.exports.checkAuth = function(username, password, callback)
-{
-    User.findById(username).lean().exec(function(err1, user)
-    {
-        if (err1)
-        {
-           callback(err1, null, {message : config.message.getItem});
-        }
-        else
-        {
-            if (user)
-            {
-                bcrypt.compare(password, user.ph, function(err2,comResult)
-                {
-                    if (err2)
-                    {
-                        callback(err2, null, {message : config.message.bcryptErr});
-                    }
-                    else
-                    {
-                        if (comResult)
-                        {
-                            callback(null, user);
-                        }
-                        else
-                        {
-                            callback(null, false, {message : config.message.wrongPassword});
-                        }
-                    }
-                });
-            }
-            else
-            {
-                callback(null, false, {message : config.message.userNotExist.replace(/[%][s]/, username)});
-            }
-        }
-    });
-}
-
-//login use passport local strategy
-function login(req, res, captcha, next)
-{
     passport.authenticate('local', function(err, user, info)
     {
         if (err)
@@ -448,25 +443,25 @@ function login(req, res, captcha, next)
         }
         if (!user)
         {
-            return renderErr(req, res, info.message);
+            return reportErr(res, info.message);
         }
-        var pathAfterLogin = '';
+        var hasPasswordExp;
         if (user.hasOwnProperty('pe'))
         {
             if (user.pe > new Date().getTime())
             {
-                pathAfterLogin = '/change';
+                hasPasswordExp = true;
             }
             else
             {
-                return renderErr(req, res, config.message.tempPasswordExpired);
+                return reportErr(res, 'tempPasswordExpired');
             }
         }
         else
         {
-            pathAfterLogin = '/plans';
+            hasPasswordExp = false;
         }
-        if (captcha)
+        if (config.recaptcha)
         {
             if (req.body['g-recaptcha-response'])
             {
@@ -484,24 +479,23 @@ function login(req, res, captcha, next)
                             }
                             return res.status(200).send(
                             {
-                                redirect : pathAfterLogin
+                                pwExp : hasPasswordExp
                             });
-                            //return res.redirect(302, pathAfterLogin);
                         });
                     }
                     else
                     {
-                        return renderErr(req, res, config.message.captchaVerifyFailed);
+                        return reportErr(res, 'captchaVerifyFailed');
                     }
                 })
                 .catch(function(err)
                 {
-                    return renderErr(req, res, config.message.captchaRequestErr);
+                    return reportErr(res, 'captchaRequestErr');
                 });
             }
             else
             {
-                return renderErr(req, res, config.message.tooManyAccess);
+                return reportErr(res, 'noRecapInBody');
             }
         }
         else
@@ -514,12 +508,51 @@ function login(req, res, captcha, next)
                 }
                 return res.status(200).send(
                 {
-                    redirect : pathAfterLogin
+                    pwExp : hasPasswordExp
                 });
-                //return res.redirect(302, pathAfterLogin);
             });
         }
     })(req, res, next);
+}
+
+//passport local strategy -- check user identity
+module.exports.passportLocal = function(username, password, callback)
+{
+    User.findById(username).lean().exec(function(err1, user)
+    {
+        if (err1)
+        {
+           callback(err1, null, {message : 'getItem'});
+        }
+        else
+        {
+            if (user)
+            {
+                bcrypt.compare(password, user.ph, function(err2,comResult)
+                {
+                    if (err2)
+                    {
+                        callback(err2, null, {message : 'bcryptErr'});
+                    }
+                    else
+                    {
+                        if (comResult)
+                        {
+                            callback(null, user);
+                        }
+                        else
+                        {
+                            callback(null, false, {message : 'wrongPassword'});
+                        }
+                    }
+                });
+            }
+            else
+            {
+                callback(null, false, {message : 'userNotExist'});
+            }
+        }
+    });
 }
 
 module.exports.serializeUser = function(user, callback)

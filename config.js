@@ -31,7 +31,9 @@ var consts = module.exports =
     maxInputTextLength : 200,
     imageServerAddr : 'https://s3.amazonaws.com/travelplanserver',
     authPath : '/api',
-    sessionSecret : '123456'
+    sessionSecret : '123456',
+    limitReqRate : false,
+    recaptcha : false
 };
 
 module.exports.message = {
@@ -49,116 +51,121 @@ module.exports.message = {
     {
         status : 500,
         msg : 'ERROR: Internal error occured while updating data in the database'
-    }
+    },
     sendEmailErr :
     {
         status : 500,
         msg : 'Email did not send out because of email server error'
-    }
+    },
     activationTokenNotMatch :
     {
         status : 400,
         msg : 'ERROR: Wrong activation token value'
-    }
+    },
     noActivationToken :
     {
         status : 400,
         msg : 'ERROR: Internal error occured, no token value exist in the database'
-    }
+    },
     activateTokenExpired :
     {
         status : 400,
         msg : 'ERROR: The activation link has expired, please resend activation email'
-    }
+    },
     userHasActivated :
     {
         status : 400,
         msg : 'ERROR: User %s has been activated before'
-    }
+    },
     userNotExist :
     {
         status : 400,
-        msg : 'ERROR: User %s does not exist'
-    }
+        msg : 'ERROR: User does not exist'
+    },
     bcryptErr :
     {
         status : 500,
         msg : 'ERROR: Internal error occured while running bcrypt'
-    }
+    },
     wrongPassword :
     {
         status : 400,
         msg : 'ERROR: Password is wrong'
-    }
+    },
     userExist :
     {
         status : 400,
         msg : 'ERROR: User already exists'
-    }
+    },
     putItem :
     {
         status : 500,
         msg : 'ERROR: Internal error occured while putting data to the database'
-    }
+    },
     tempPasswordExpired :
     {
         status : 400,
         msg : 'ERROR: The temperary password has expired, please reset password again'
-    }
+    },
     accountNotActive :
     {
         status : 400,
         msg : 'ERROR: The account is not activated, cannot reset password'
-    }
+    },
     signLoginFail :
     {
         status : 500,
         msg : 'ERROR: Login in after signup failed'
-    }
+    },
     destroySessionErr :
     {
         status : 500,
         msg : 'ERROR: Internal error occured while destroying the user session'
-    }
+    },
     resetEmailErr :
     {
         status : 500,
         msg : 'ERROR: Internal error occured while sending temorary password'
-    }
+    },
     notLoggedIn :
     {
         status : 400,
         msg : 'You are not logged in, please login'
-    }
+    },
     passwordChanged :
     {
         status : 200,
         msg : 'Password has been changed successfully'
-    }
+    },
     captchaVerifyFailed :
     {
         status : 400,
         msg : 'The non-bot checking failed'
-    }
+    },
     captchaRequestErr :
     {
         status : 500,
         msg : 'Internal error occured whiling requesting for captcha verification'
-    }
+    },
     tooManyRequestIP :
     {
         status : 400,
         msg : 'Requested too many times from the same IP, please wait'
-    }
+    },
     tooManyRequestUser :
     {
         status : 400,
         msg : 'Requested too many times from the same user, please wait'
-    }
+    },
     inputTextTooLong : 
     {
         status : 400,
         msg : 'The input text is too long'
+    },
+    noRecapInBody :
+    {
+        status : 400,
+        msg : 'No recaptcha value in request body while server recaptcha verification is enabled'
     }
 };
 

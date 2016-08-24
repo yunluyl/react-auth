@@ -31,7 +31,7 @@ module.exports = function(userConfig, app)
         autoRemove : 'native'
     });
     
-    passport.use(new localStrategy({usernameField : '_id', passwordField : 'pw'}, auth.checkAuth));
+    passport.use(new localStrategy({usernameField : '_id', passwordField : 'pw'}, auth.passportLocal));
     const sessionMiddleware = session(
     {
         secret: configFile.sessionSecret,

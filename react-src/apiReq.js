@@ -25,6 +25,8 @@ export default (method, path, data, start, success, fail) =>
 	    		return response.json().then((json) =>
 	    		{
 	    			success(json);
+	    			console.log('succeeded!');
+	    			console.log(json);
 	    			if (json.hasOwnProperty('redirect'))
 	    			{
 	    				browserHistory.push(json.redirect);
@@ -55,6 +57,8 @@ export default (method, path, data, start, success, fail) =>
 	    	return response.json().then((json) =>
 	    	{
 	    		fail(json);
+	    		console.log('failed!');
+	    		console.log(json);
 	    		if (json.hasOwnProperty('err'))
 	    		{
 	    			console.log(json.err);

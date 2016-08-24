@@ -6,7 +6,7 @@ import Auth from '../react-lib/Auth';
 const authConfig =
 {
 	authPath : '/auth',
-	recaptcha : true,
+	recaptcha : false,
 	sitekey : '6LfqHigTAAAAAN3M7N_PRfODACcRtG1WnTnjgbxd',
 	login :
 	{

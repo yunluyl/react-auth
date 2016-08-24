@@ -26,6 +26,8 @@ exports.default = function (method, path, data, start, success, fail) {
 			if (response.headers.get('Content-Type') === 'application/json; charset=utf-8') {
 				return response.json().then(function (json) {
 					success(json);
+					console.log('succeeded!');
+					console.log(json);
 					if (json.hasOwnProperty('redirect')) {
 						browserHistory.push(json.redirect);
 					}
@@ -47,6 +49,8 @@ exports.default = function (method, path, data, start, success, fail) {
 		} else {
 			return response.json().then(function (json) {
 				fail(json);
+				console.log('failed!');
+				console.log(json);
 				if (json.hasOwnProperty('err')) {
 					console.log(json.err);
 				}

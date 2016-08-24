@@ -60,7 +60,7 @@
 	
 	var authConfig = {
 		authPath: '/auth',
-		recaptcha: true,
+		recaptcha: false,
 		sitekey: '6LfqHigTAAAAAN3M7N_PRfODACcRtG1WnTnjgbxd',
 		login: {
 			style: {
@@ -21577,6 +21577,8 @@
 				if (response.headers.get('Content-Type') === 'application/json; charset=utf-8') {
 					return response.json().then(function (json) {
 						success(json);
+						console.log('succeeded!');
+						console.log(json);
 						if (json.hasOwnProperty('redirect')) {
 							browserHistory.push(json.redirect);
 						}
@@ -21598,6 +21600,8 @@
 			} else {
 				return response.json().then(function (json) {
 					fail(json);
+					console.log('failed!');
+					console.log(json);
 					if (json.hasOwnProperty('err')) {
 						console.log(json.err);
 					}

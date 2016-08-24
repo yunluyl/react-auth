@@ -1,3 +1,0 @@
-#!/bin/bash
-webpack --progress --colors
-node ./test/server.js
