@@ -137,15 +137,15 @@ module.exports.message = {
         status : 200,
         msg : 'Password has been changed successfully'
     },
-    captchaVerifyFailed :
+    recaptchaVerifyFailed :
     {
         status : 400,
         msg : 'The non-bot checking failed'
     },
-    captchaRequestErr :
+    recaptchaRequestErr :
     {
         status : 500,
-        msg : 'Internal error occured whiling requesting for captcha verification'
+        msg : 'Internal error occured whiling requesting for recaptcha verification'
     },
     tooManyRequestIP :
     {

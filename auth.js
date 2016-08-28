@@ -1,13 +1,13 @@
 var passport = require('passport');
-var bcrypt = require('bcryptjs');
 var config = require('./config');
 var nodemailer = require('nodemailer');
-var transporter = nodemailer.createTransport(config.smtpConfig);
 var uuid = require('node-uuid');
 var querystring = require('querystring');
 var https = require('https');
 var promise = require('bluebird');
 var mongoose = promise.promisifyAll(require('mongoose'));
+var bcrypt = promise.promisifyAll(require('bcryptjs'));
+var transporter = promise.promisifyAll(nodemailer.createTransport(config.smtpConfig));
 
 var User = mongoose.model('User');
 var ReqList = mongoose.model('ReqList');
@@ -261,148 +261,121 @@ module.exports.activate = function(req,res) {
 //signup wrapper
 module.exports.signup = function(req, res)
 {
-    if (req.body._id.length > config.maxInputTextLength || req.body.dn.length > config.maxInputTextLength || req.body.pw.length > config.maxInputTextLength)
+    if (config.limitReqRate)
     {
-        return renderErr(req, res, config.message.inputTextTooLong);
+        reqLimit(req, res)
+        .then(function()
+        {
+            _signupLocal(req, res, next);
+        })
+        .catch(function(e)
+        {
+            return reportErr(res, e.message);
+        });
     }
-    reqLimit(req, res, renderErr, signup);
+    else
+    {
+        _signupLocal(req, res, next);
+    }
 }
 
 //signup function
-function signup(req, res, captcha)
+function _signupLocal(req, res)
 {
-    bcrypt.hash(req.body.pw, config.saltRounds, function(err1, hash) {
-        if (err1)
+    if (req.body._id.length > config.maxInputTextLength || req.body.dn.length > config.maxInputTextLength || req.body.pw.length > config.maxInputTextLength)
+    {
+        return reportErr(res, 'inputTextTooLong');
+    }
+    bcrypt.hashAsync(req.body.pw, config.saltRounds)
+    .then(function(hash)
+    {
+        if (config.recaptcha)
         {
-            renderErr(req, res, config.message.bcryptErr);
+            if (req.body['g-recaptcha-response'])
+            {
+                verifyCaptcha(req)
+                .then(function(chunk)
+                {
+                    var result = JSON.parse(chunk);
+                    if (result.success)
+                    {
+                        return _signupAfterRecaptcha(req, res, hash);
+                    }
+                    else
+                    {
+                        return reportErr(res, 'recaptchaVerifyFailed');
+                    }
+                })
+                .catch(function(err)
+                {
+                    return reportErr(res, 'recaptchaRequestErr');
+                });
+            }
+            else
+            {
+                return reportErr(res, 'noRecapInBody');
+            }
         }
         else
         {
-            if (captcha)
+            return _signupAfterRecaptcha(req, res, hash);
+        }
+    })
+    .catch(function(e)
+    {
+        return reportErr(res, 'bcryptErr');
+    });
+}
+
+function _signupAfterRecaptcha(req, res, hash)
+{
+    var token = uuid.v4();
+    var expirationTime = new Date().getTime() + config.activationLinkExpireTime;
+    User.createAsync(new User({
+        _id : req.body._id,
+        ph : hash,
+        dn : req.body.dn,
+        tk : token,
+        et : expirationTime
+    }))
+    .then(function(data)
+    {
+        transporter.sendMailAsync(new config.activationEmail(req.body._id,token))
+        .then(function(info)
+        {
+            req.login(data, function(err)
             {
-                if (req.body['g-recaptcha-response'])
+                if (err)
                 {
-                    verifyCaptcha(req)
-                    .then(function(chunk)
+                    res.status(200).send(
                     {
-                        var result = JSON.parse(chunk);
-                        if (result.success)
-                        {
-                            var token = uuid.v4();
-                            var expirationTime = new Date().getTime() + config.activationLinkExpireTime;
-                            User.create(new User({
-                                _id : req.body._id,
-                                ph : hash,
-                                dn : req.body.dn,
-                                tk : token,
-                                et : expirationTime
-                            }), function(err2, data2)
-                            {
-                                if (err2)
-                                {
-                                    if (err2.code === 11000)
-                                    {
-                                        renderErr(req, res, config.message.userExist);
-                                    }
-                                    else
-                                    {
-                                        renderErr(req, res, config.message.putItem);
-                                    }
-                                }
-                                else
-                                {
-                                    transporter.sendMail(new config.activationEmail(req.body._id,token), function(err3,info)
-                                    {
-                                        req.login(data2, function(err4)
-                                        {
-                                            if (err4)
-                                            {
-                                                res.status(200).send(
-                                                {
-                                                    redirect : '/login',
-                                                    msg : config.message.signLoginFail
-                                                });
-                                                //res.redirect(302, '/login?err=signLoginFail');
-                                            }
-                                            else
-                                            {
-                                                res.status(200).send(
-                                                {
-                                                    redirect : '/plans'
-                                                });
-                                                //res.redirect(302, '/plans');
-                                            }
-                                        });
-                                    });
-                                }
-                            });
-                        }
-                        else
-                        {
-                            return renderErr(req, res, config.message.captchaVerifyFailed);
-                        }
-                    })
-                    .catch(function(err)
-                    {
-                        return renderErr(req, res, config.message.captchaRequestErr);
+                        redirect : '/login',
+                        msg : config.message.signLoginFail
                     });
                 }
                 else
                 {
-                    return renderErr(req, res, config.message.tooManyAccess);
+                    res.status(200).send(
+                    {
+                        redirect : '/plans'
+                    });
                 }
-            }
-            else
-            {
-                var token = uuid.v4();
-                var expirationTime = new Date().getTime() + config.activationLinkExpireTime;
-                User.create(new User({
-                    _id : req.body._id,
-                    ph : hash,
-                    dn : req.body.dn,
-                    tk : token,
-                    et : expirationTime
-                }), function(err2, data2)
-                {
-                    if (err2)
-                    {
-                        if (err2.code === 11000)
-                        {
-                            renderErr(req, res, config.message.userExist);
-                        }
-                        else
-                        {
-                            renderErr(req, res, config.message.putItem);
-                        }
-                    }
-                    else
-                    {
-                        transporter.sendMail(new config.activationEmail(req.body._id,token), function(err3,info)
-                        {
-                            req.login(data2, function(err4)
-                            {
-                                if (err4)
-                                {
-                                    res.status(200).send(
-                                    {
-                                        redirect : '/login',
-                                        msg : config.message.signLoginFail
-                                    });
-                                    //res.redirect(302, '/login?err=signLoginFail');
-                                }
-                                else
-                                {
-                                    res.status(200).send(
-                                    {
-                                        redirect : '/plans'
-                                    });
-                                    //res.redirect(302, '/plans');
-                                }
-                            });
-                        });
-                    }
-                });
-            }
+            });
+        })
+        .catch(funcion(e)
+        {
+            reportErr(res, 'sendEmailErr');
+        });
+    })
+    .catch(function(e)
+    {
+        if (e.code === 11000)
+        {
+            reportErr(res, 'userExist');
+        }
+        else
+        {
+            reportErr(res, 'putItem');
         }
     });
 }
@@ -415,7 +388,7 @@ module.exports.login = function(req, res, next)
         reqLimit(req, res)
         .then(function()
         {
-            loginLocal(req, res, next);
+            _loginLocal(req, res, next);
         })
         .catch(function(e)
         {
@@ -424,12 +397,12 @@ module.exports.login = function(req, res, next)
     }
     else
     {
-        loginLocal(req, res, next);
+        _loginLocal(req, res, next);
     }
 }
 
 //local login function
-function loginLocal(req, res, next)
+function _loginLocal(req, res, next)
 {
     if (req.body._id.length > config.maxInputTextLength || req.body.pw.length > config.maxInputTextLength)
     {
@@ -485,12 +458,12 @@ function loginLocal(req, res, next)
                     }
                     else
                     {
-                        return reportErr(res, 'captchaVerifyFailed');
+                        return reportErr(res, 'recaptchaVerifyFailed');
                     }
                 })
                 .catch(function(err)
                 {
-                    return reportErr(res, 'captchaRequestErr');
+                    return reportErr(res, 'recaptchaRequestErr');
                 });
             }
             else
@@ -518,40 +491,36 @@ function loginLocal(req, res, next)
 //passport local strategy -- check user identity
 module.exports.passportLocal = function(username, password, callback)
 {
-    User.findById(username).lean().exec(function(err1, user)
+    User.findById(username).lean().execAsync()
+    .then(function(user)
     {
-        if (err1)
+        if (user)
         {
-           callback(err1, null, {message : 'getItem'});
+            bcrypt.compareAsync(password, user.ph)
+            .then(function(comResult)
+            {
+                if (comResult)
+                {
+                    callback(null, user);
+                }
+                else
+                {
+                    callback(null, false, {message : 'wrongPassword'});
+                }
+            })
+            .catch(function(e)
+            {
+                callback(e, null, {message : 'bcryptErr'});
+            });
         }
         else
         {
-            if (user)
-            {
-                bcrypt.compare(password, user.ph, function(err2,comResult)
-                {
-                    if (err2)
-                    {
-                        callback(err2, null, {message : 'bcryptErr'});
-                    }
-                    else
-                    {
-                        if (comResult)
-                        {
-                            callback(null, user);
-                        }
-                        else
-                        {
-                            callback(null, false, {message : 'wrongPassword'});
-                        }
-                    }
-                });
-            }
-            else
-            {
-                callback(null, false, {message : 'userNotExist'});
-            }
+            callback(null, false, {message : 'userNotExist'});
         }
+    })
+    .catch(function(e)
+    {
+        callback(e, null, {message : 'getItem'});
     });
 }
 
@@ -647,12 +616,12 @@ function resetPassword(req, res, captcha)
                                 }
                                 else
                                 {
-                                    return renderErr(req, res, config.message.captchaVerifyFailed);
+                                    return renderErr(req, res, config.message.recaptchaVerifyFailed);
                                 }
                             })
                             .catch(function(err)
                             {
-                                return renderErr(req, res, config.message.captchaRequestErr);
+                                return renderErr(req, res, config.message.recaptchaRequestErr);
                             });
                         }
                         else
