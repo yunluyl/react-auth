@@ -266,7 +266,7 @@ module.exports.signup = function(req, res)
         reqLimit(req, res)
         .then(function()
         {
-            _signupLocal(req, res, next);
+            _signupLocal(req, res);
         })
         .catch(function(e)
         {
@@ -275,7 +275,7 @@ module.exports.signup = function(req, res)
     }
     else
     {
-        _signupLocal(req, res, next);
+        _signupLocal(req, res);
     }
 }
 
@@ -347,23 +347,17 @@ function _signupAfterRecaptcha(req, res, hash)
             {
                 if (err)
                 {
-                    res.status(200).send(
-                    {
-                        redirect : '/login',
-                        msg : config.message.signLoginFail
-                    });
+                    reportErr(res, 'signLoginFail');
                 }
                 else
                 {
-                    res.status(200).send(
-                    {
-                        redirect : '/plans'
-                    });
+                    res.status(200).send({});
                 }
             });
         })
-        .catch(funcion(e)
+        .catch(function(e)
         {
+            console.log(e);
             reportErr(res, 'sendEmailErr');
         });
     })
@@ -529,7 +523,7 @@ module.exports.serializeUser = function(user, callback)
     callback(null, user._id);
 }
 
-//tell passport how to find user in database
+//passport find user in database
 module.exports.deserializeUser = function(id, callback)
 {
     User.findById(id).lean().exec(function(err, user)
@@ -541,141 +535,121 @@ module.exports.deserializeUser = function(id, callback)
 //reset password wrapper to limit the number of reset requests
 module.exports.resetPassword = function(req, res)
 {
-    if (req.body._id.length > config.maxInputTextLength)
+    if (config.limitReqRate)
     {
-        return renderErr(req, res, config.message.inputTextTooLong);
+        reqLimit(req, res)
+        .then(function()
+        {
+            return _resetLocal(req, res);
+        })
+        .catch(function(e)
+        {
+            return reportErr(res, e.message);
+        });
     }
-    reqLimit(req, res, renderErr, resetPassword);
+    else
+    {
+        return _resetLocal(req, res);
+    }
 }
 
 //api function serves reset password requests
-function resetPassword(req, res, captcha)
+function _resetLocal(req, res)
 {
-    User.findById(req.body._id).lean().exec(function(err1, user)
+    if (req.body._id.length > config.maxInputTextLength)
     {
-        if (err1)
+        return reportErr(res, 'inputTextTooLong');
+    }
+    User.findById(req.body._id).lean().execAsync()
+    .then(function(user)
+    {
+        if (user)
         {
-            renderErr(req, res, config.message.getItem);
-        }
-        else {
-            if (user)
+            if (user.hasOwnProperty('ep'))
             {
-                if (user.hasOwnProperty('ep'))
-                {
-                    renderErr(req, res, config.message.accountNotActive);
-                }
-                else
-                {
-                    if (captcha)
-                    {
-                        if (req.body['g-recaptcha-response'])
-                        {
-                            verifyCaptcha(req)
-                            .then(function(chunk)
-                            {
-                                var result = JSON.parse(chunk);
-                                if (result.success)
-                                {
-                                    var randomPassword = config.generatePassword();
-                                    bcrypt.hash(randomPassword, config.saltRounds, function(err2, hash)
-                                    {
-                                        if (err2)
-                                        {
-                                            renderErr(req, res, config.message.bcryptErr);
-                                        }
-                                        else
-                                        {
-                                            var passwordExpirationTime = new Date().getTime() + config.tempPasswordExpireTime;
-                                            User.update({_id : req.body._id}, {$set : {ph : hash, pe : passwordExpirationTime}}, function(err3, data3)
-                                            {
-                                                if (err3 || data3.nModified !== 1)
-                                                {
-                                                    renderErr(req, res, config.message.putItem);
-                                                }
-                                                else
-                                                {
-                                                    transporter.sendMail(new config.resetEmail(req.body._id,randomPassword), function(err4,info)
-                                                    {
-                                                        if (err4)
-                                                        {
-                                                            renderErr(req, res, config.message.resetEmailErr);
-                                                        }
-                                                        else
-                                                        {
-                                                            res.status(200).send(
-                                                            {
-                                                                redirect : '/login'
-                                                            });
-                                                            //res.redirect(302, '/login'); //password reset sccessful
-                                                        }
-                                                    });
-                                                }
-                                            });
-                                        }
-                                    });
-                                }
-                                else
-                                {
-                                    return renderErr(req, res, config.message.recaptchaVerifyFailed);
-                                }
-                            })
-                            .catch(function(err)
-                            {
-                                return renderErr(req, res, config.message.recaptchaRequestErr);
-                            });
-                        }
-                        else
-                        {
-                            return renderErr(req, res, config.message.tooManyAccess);
-                        }
-                    }
-                    else
-                    {
-                        var randomPassword = config.generatePassword();
-                        bcrypt.hash(randomPassword, config.saltRounds, function(err2, hash)
-                        {
-                            if (err2)
-                            {
-                                renderErr(req, res, config.message.bcryptErr);
-                            }
-                            else
-                            {
-                                var passwordExpirationTime = new Date().getTime() + config.tempPasswordExpireTime;
-                                User.update({_id : req.body._id}, {$set : {ph : hash, pe : passwordExpirationTime}}, function(err3, data3)
-                                {
-                                    if (err3 || data3.nModified !== 1)
-                                    {
-                                        renderErr(req, res, config.message.putItem);
-                                    }
-                                    else
-                                    {
-                                        transporter.sendMail(new config.resetEmail(req.body._id,randomPassword), function(err4,info)
-                                        {
-                                            if (err4)
-                                            {
-                                                renderErr(req, res, config.message.resetEmailErr);
-                                            }
-                                            else
-                                            {
-                                                res.status(200).send(
-                                                {
-                                                    redirect : '/login'
-                                                });
-                                                //res.redirect(302, '/login'); //password reset sccessful
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                }
+                renderErr(res, 'accountNotActive');
             }
             else
             {
-                renderErr(req, res, config.message.userNotExist.replace(/[%][s]/,req.body._id));
+                if (config.recaptcha)
+                {
+                    if (req.body['g-recaptcha-response'])
+                    {
+                        verifyCaptcha(req)
+                        .then(function(chunk)
+                        {
+                            var result = JSON.parse(chunk);
+                            if (result.success)
+                            {
+                                return _resetAfterRecaptcha(req, res);
+                            }
+                            else
+                            {
+                                return reportErr(res, 'recaptchaVerifyFailed');
+                            }
+                        })
+                        .catch(function(err)
+                        {
+                            return reportErr(res, 'recaptchaRequestErr');
+                        });
+                    }
+                    else
+                    {
+                        return reportErr(res, 'noRecapInBody');
+                    }
+                }
+                else
+                {
+                    return _resetAfterRecaptcha(req, res);
+                }
             }
         }
+        else
+        {
+            return reportErr(res, 'userNotExist');
+        }
+    })
+    .catch(function(e)
+    {
+        return reportErr(res, 'getItem');
+    });
+}
+
+function _resetAfterRecaptcha(req, res)
+{
+    var randomPassword = config.generatePassword();
+    bcrypt.hashAsync(randomPassword, config.saltRounds)
+    .then(function(hash)
+    {
+        var passwordExpirationTime = new Date().getTime() + config.tempPasswordExpireTime;
+        User.updateAsync({_id : req.body._id}, {$set : {ph : hash, pe : passwordExpirationTime}})
+        .then(function(data)
+        {
+            if (data.nModified !== 1)
+            {
+                throw new Error();
+            }
+            else
+            {
+                transporter.sendMailAsync(new config.resetEmail(req.body._id, randomPassword))
+                .then(function(info)
+                {
+                    return res.status(200).send({});
+                })
+                .catch(function(e)
+                {
+                    return reportErr(res, 'resetEmailErr');
+                });
+            }
+        })
+        .catch(function(e)
+        {
+            return reportErr(res, 'putItem');
+        });
+    })
+    .catch(function(e)
+    {
+        return reportErr(res, 'bcryptErr');
     });
 }
 
@@ -740,121 +714,131 @@ module.exports.resendEmail = function(req, res)
 //change password
 module.exports.changePassword = function(req, res)
 {
-    if (req.body.pw.length > config.maxInputTextLength || req.body.np.length > config.maxInputTextLength)
+    if (config.limitReqRate)
     {
-        return renderErr(req, res, config.message.inputTextTooLong);
-    }
-    if (req.user)
-    {
-        if (req.user.hasOwnProperty('pe'))
+        reqLimit(req, res)
+        .then(function()
         {
-            bcrypt.hash(req.body.np, config.saltRounds, function(err1, hash)
-            {
-                if (err1)
-                {
-                    res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.bcryptErr});
-                }
-                else
-                {
-                    User.update({_id : req.user._id}, {$set : {ph : hash}, $unset : {pe : ''}}, function(err2, data2)
-                    {
-                        if (err2 || data2.nModified !== 1)
-                        {
-                            res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.editItem});
-                        }
-                        else
-                        {
-                            transporter.sendMail(new config.confirmEmail(req.user._id,'passwordChange'), function(err3,info)
-                            {
-                                res.render('notification', {title : 'Travel Plan', message : config.message.passwordChanged});
-                            });
-                        }
-                    });
-                }
-            });
-        }
-        else
+            return _changeLocal(req, res);
+        })
+        .catch(function(e)
         {
-            User.findById(req.user._id).lean().exec(function(err1, user)
-            {
-                if (err1)
-                {
-                    res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.getItem});
-                }
-                else
-                {
-                    if (user)
-                    {
-                        bcrypt.compare(req.body.pw, user.ph, function(err2, comResult2)
-                        {
-                            if (comResult2)
-                            {
-                                bcrypt.hash(req.body.np, config.saltRounds, function(err3, hash)
-                                {
-                                    if (err3)
-                                    {
-                                        res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.bcryptErr});
-                                    }
-                                    else
-                                    {
-                                        User.update({_id : req.user._id}, {$set : {ph : hash}}, function(err4, data4)
-                                        {
-                                            if (err4 || data4.nModified !== 1)
-                                            {
-                                                res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.editItem});
-                                            }
-                                            else
-                                            {
-                                                transporter.sendMail(new config.confirmEmail(req.user._id,'passwordChange'), function(err5,info)
-                                                {
-                                                    res.render('notification', {title : 'Travel Plan', message : config.message.passwordChanged});
-                                                });
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                            else
-                            {
-                                res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.wrongPassword});
-                            }
-                        });
-                    }
-                    else
-                    {
-                        res.render('change', {title : 'Travel Plan', user : req.user, message : config.message.userNotExist.replace(/[%][s]/,req.user._id)});
-                    }
-                }
-            });
-        }
+            return reportErr(res, e.message);
+        });
     }
     else
     {
-        res.status(400).send(
+        return _changeLocal(req, res);
+    }
+}
+
+function _changeLocal(req, res)
+{
+    if (req.body.pw.length > config.maxInputTextLength || req.body.np.length > config.maxInputTextLength)
+    {
+        return reportErr(res, 'inputTextTooLong');
+    }
+    if (req.body._id)
+    {
+        User.findById(req.body._id).lean().execAsync()
+        .then(function(user)
         {
-            redirect : '/login',
-            msg : config.message.notLoggedIn
+            if (user)
+            {
+                req.user = user;
+            }
+            else
+            {
+                reportErr(res, 'userNotExist');
+            }
+        })
+        .catch(function(e)
+        {
+            return reportErr(res, 'getItem');
         });
-        //res.redirect('/login?err=notLoggedIn'); //redirect to user login
+    }
+    if (req.user)
+    {
+        let updateCondition;
+        if (req.user.hasOwnProperty('pe'))
+        {
+            if (req.user.pe <= new Date().getTime())
+            {
+                return reportErr(res, 'tempTokenExpired');
+            }
+            updateCondition = {$set : {ph : hash}, $unset : {pe : ''}};
+        }
+        else
+        {
+            updateCondition = {$set : {ph : hash}};
+        }
+
+        bcrypt.compareAsync(req.body.pw, user.ph)
+        .then(function(comResult)
+        {
+            if (comResult)
+            {
+                bcrypt.hashAsync(req.body.np, config.saltRounds)
+                .then(function(hash)
+                {
+                    User.updateAsync({_id : req.user._id}, updateCondition)
+                    .then(function(data)
+                    {
+                        if (data.nModified !== 1)
+                        {
+                            throw new Error();
+                        }
+                        else
+                        {
+                            transporter.sendMailAsync(new config.confirmEmail(req.user._id,'passwordChange'))
+                            .then(function(info)
+                            {
+                                return res.status(200).send({});
+                            })
+                            .catch(function(e)
+                            {
+                                return reportErr(res, 'sendEmailErr');
+                            });
+                        }
+                    })
+                    .catch(function(e)
+                    {
+                        return reportErr(res, 'editItem');
+                    });
+                })
+                .catch(function(e)
+                {
+                    return reportErr(res, 'bcryptErr');
+                });
+            }
+            else
+            {
+                return reportErr(res, 'wrongPassword');
+            }
+        })
+        .catch(function(e)
+        {
+            return reportErr(res, 'bcryptErr');
+        });
+    }
+    else
+    {
+        reportErr(res, 'notLoggedIn');
     }
 }
 
 //logout
 module.exports.logout = function(req, res)
 {
-    req.session.destroy(function(err1)
+    req.session.destroy(function(err)
     {
-        if (err1) 
+        if (err)
         {
-            res.status(500).send(
-            {
-                err : 'destroySessionErr',
-                msg : config.message.destroySessionErr
-            });
+            reportErr(res, 'destroySessionErr');
         }
         else
         {
-            res.status(200).send();
+            res.status(200).send({});
         }
     });
 }

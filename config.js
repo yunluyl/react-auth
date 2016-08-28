@@ -107,6 +107,11 @@ module.exports.message = {
         status : 400,
         msg : 'ERROR: The temperary password has expired, please reset password again'
     },
+    tempTokenExpired :
+    {
+        status : 400,
+        msg : 'ERROR: The temperary token has expired, please reset password again'
+    },
     accountNotActive :
     {
         status : 400,

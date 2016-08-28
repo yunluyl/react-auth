@@ -8,6 +8,7 @@ var router = express.Router();
 router.post('/login', auth.login);
 router.post('/signup', auth.signup);
 router.post('/reset', auth.resetPassword);
+router.post('/change', auth.changePassword);
 
 //requires user session to continue
 router.use(function(req, res, next)
@@ -23,7 +24,6 @@ router.use(function(req, res, next)
 });
 
 //protected api
-router.post('/change', auth.changePassword);
 router.get('/logout', auth.logout);
 router.get('/resend', auth.resendEmail);
 

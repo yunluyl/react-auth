@@ -55,21 +55,6 @@ const LoginForm = (props) =>
 		    >
 		        {props.login.errorMsg}
 		    </div>
-		    <button
-		    	className={props.loginClass?props.loginClass.linkToSignup:''}
-		    	style={props.loginStyle?props.loginStyle.linkToSignup:{}}
-		    	type='button'
-		    >
-		    	Signup
-		    </button>
-		    <button
-		    	className={props.loginClass?props.loginClass.linkToReset:''}
-		    	style={props.loginStyle?props.loginStyle.linkToReset:{}}
-		    	type='button'
-		    >
-		    	Forget password
-		    </button>
-		    <br />
 		    <input type='submit' value='Submit' />
 		</form>
 	);

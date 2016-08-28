@@ -46,51 +46,166 @@
 
 	'use strict';
 	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
 	var _react = __webpack_require__(1);
 	
 	var _react2 = _interopRequireDefault(_react);
 	
 	var _reactDom = __webpack_require__(33);
 	
-	var _Auth = __webpack_require__(172);
+	var _Login = __webpack_require__(172);
 	
-	var _Auth2 = _interopRequireDefault(_Auth);
+	var _Login2 = _interopRequireDefault(_Login);
+	
+	var _Signup = __webpack_require__(178);
+	
+	var _Signup2 = _interopRequireDefault(_Signup);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var authConfig = {
-		authPath: '/auth',
-		recaptcha: false,
-		sitekey: '6LfqHigTAAAAAN3M7N_PRfODACcRtG1WnTnjgbxd',
-		login: {
-			style: {
-				form: {},
-				emailBox: {},
-				emailError: {
-					display: 'inline-block'
-				},
-				passwordBox: {},
-				passwordError: {
-					display: 'inline-block'
-				},
-				errorMessage: {
-					height: '20px',
-					backgroundColor: 'red'
-				},
-				linkToSignup: {
-					display: 'inline-block'
-				},
-				linkToReset: {
-					marginLeft: '50px',
-					display: 'inline-block'
-				}
-			}
-		},
-		reset: {},
-		signup: {}
-	};
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	(0, _reactDom.render)(_react2.default.createElement(_Auth2.default, { authConfig: authConfig }), document.getElementById('root'));
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var Auth = function (_React$Component) {
+		_inherits(Auth, _React$Component);
+	
+		function Auth() {
+			var _Object$getPrototypeO;
+	
+			var _temp, _this, _ret;
+	
+			_classCallCheck(this, Auth);
+	
+			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+				args[_key] = arguments[_key];
+			}
+	
+			return _ret = (_temp = (_this = _possibleConstructorReturn(this, (_Object$getPrototypeO = Object.getPrototypeOf(Auth)).call.apply(_Object$getPrototypeO, [this].concat(args))), _this), _this.state = {
+				activePanel: 'login' //login, signup, reset
+			}, _this.loginStart = function () {}, _this.loginSuccess = function (data) {}, _this.loginFail = function (err) {}, _this.signupStart = function () {}, _this.signupSuccess = function (data) {
+				_this.setState({
+					activePanel: 'login'
+				});
+			}, _this.signupFail = function (err) {}, _this.linkToSignup = function (e) {
+				_this.setState({
+					activePanel: 'signup'
+				});
+			}, _this.linkToLogin = function (e) {
+				_this.setState({
+					activePanel: 'login'
+				});
+			}, _temp), _possibleConstructorReturn(_this, _ret);
+		}
+	
+		_createClass(Auth, [{
+			key: 'componentWillMount',
+			value: function componentWillMount() {
+				this.authPath = '/auth';
+				this.recaptcha = false;
+				this.sitekey = '6LfqHigTAAAAAN3M7N_PRfODACcRtG1WnTnjgbxd';
+	
+				this.loginConfig = {
+					style: {
+						form: {},
+						emailBox: {},
+						emailError: {
+							display: 'inline-block'
+						},
+						passwordBox: {},
+						passwordError: {
+							display: 'inline-block'
+						},
+						errorMessage: {
+							height: '20px',
+							backgroundColor: 'red'
+						}
+					}
+				};
+	
+				this.signupConfig = {
+					style: {
+						form: {},
+						emailBox: {},
+						emailError: {
+							display: 'inline-block'
+						},
+						nameBox: {},
+						nameError: {
+							display: 'inline-block'
+						},
+						passwordBox: {},
+						passwordError: {
+							display: 'inline-block'
+						},
+						confirmBox: {},
+						confirmError: {
+							display: 'inline-block'
+						},
+						errorMessage: {
+							height: '20px',
+							backgroundColor: 'red'
+						}
+					}
+				};
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				var activePanel = void 0;
+				switch (this.state.activePanel) {
+					case 'login':
+						activePanel = _react2.default.createElement(_Login2.default, {
+							loginConfig: this.loginConfig,
+							authPath: this.authPath,
+							recaptcha: this.recaptcha,
+							sitekey: this.sitekey,
+							start: this.loginStart,
+							success: this.loginSuccess,
+							fail: this.loginFail
+						});
+						break;
+					case 'signup':
+						activePanel = _react2.default.createElement(_Signup2.default, {
+							signupConfig: this.signupConfig,
+							authPath: this.authPath,
+							recaptcha: this.recaptcha,
+							sitekey: this.sitekey,
+							start: this.signupStart,
+							success: this.signupSuccess,
+							fail: this.signupFail
+						});
+						break;
+					case 'reset':
+						break;
+					default:
+						activePanel = _react2.default.createElement(_Login2.default, {
+							loginConfig: this.loginConfig,
+							authPath: this.authPath,
+							recaptcha: this.recaptcha,
+							sitekey: this.sitekey,
+							start: this.loginStart,
+							success: this.loginSuccess,
+							fail: this.loginFail
+						});
+				}
+				return _react2.default.createElement(
+					'div',
+					null,
+					activePanel,
+					_react2.default.createElement('input', { type: 'button', onClick: this.linkToSignup, value: 'Signup' }),
+					_react2.default.createElement('input', { type: 'button', onClick: this.linkToLogin, value: 'Login' })
+				);
+			}
+		}]);
+	
+		return Auth;
+	}(_react2.default.Component);
+	
+	(0, _reactDom.render)(_react2.default.createElement(Auth, null), document.getElementById('root'));
 
 /***/ },
 /* 1 */
@@ -21131,63 +21246,6 @@
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
-		value: true
-	});
-	
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
-	var _react = __webpack_require__(1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _LoginContainer = __webpack_require__(173);
-	
-	var _LoginContainer2 = _interopRequireDefault(_LoginContainer);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	var Auth = function (_React$Component) {
-		_inherits(Auth, _React$Component);
-	
-		function Auth() {
-			_classCallCheck(this, Auth);
-	
-			return _possibleConstructorReturn(this, Object.getPrototypeOf(Auth).apply(this, arguments));
-		}
-	
-		_createClass(Auth, [{
-			key: 'render',
-			value: function render() {
-				return _react2.default.createElement(_LoginContainer2.default, {
-					loginConfig: this.props.authConfig.login,
-					authPath: this.props.authConfig.authPath,
-					recaptcha: this.props.authConfig.recaptcha,
-					sitekey: this.props.authConfig.sitekey
-				});
-			}
-		}]);
-	
-		return Auth;
-	}(_react2.default.Component);
-	
-	Auth.propTypes = {
-		authConfig: _react2.default.PropTypes.object.isRequired
-	};
-	exports.default = Auth;
-
-/***/ },
-/* 173 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 	
@@ -21197,11 +21255,11 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _LoginForm = __webpack_require__(174);
+	var _LoginForm = __webpack_require__(173);
 	
 	var _LoginForm2 = _interopRequireDefault(_LoginForm);
 	
-	var _apiReq = __webpack_require__(176);
+	var _apiReq = __webpack_require__(175);
 	
 	var _apiReq2 = _interopRequireDefault(_apiReq);
 	
@@ -21213,21 +21271,21 @@
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
-	var LoginContainer = function (_React$Component) {
-	    _inherits(LoginContainer, _React$Component);
+	var Login = function (_React$Component) {
+	    _inherits(Login, _React$Component);
 	
-	    function LoginContainer() {
+	    function Login() {
 	        var _Object$getPrototypeO;
 	
 	        var _temp, _this, _ret;
 	
-	        _classCallCheck(this, LoginContainer);
+	        _classCallCheck(this, Login);
 	
 	        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
 	            args[_key] = arguments[_key];
 	        }
 	
-	        return _ret = (_temp = (_this = _possibleConstructorReturn(this, (_Object$getPrototypeO = Object.getPrototypeOf(LoginContainer)).call.apply(_Object$getPrototypeO, [this].concat(args))), _this), _this.state = {
+	        return _ret = (_temp = (_this = _possibleConstructorReturn(this, (_Object$getPrototypeO = Object.getPrototypeOf(Login)).call.apply(_Object$getPrototypeO, [this].concat(args))), _this), _this.state = {
 	            email: '',
 	            password: '',
 	            emMsg: '',
@@ -21236,10 +21294,13 @@
 	            isLogin: false
 	        }, _this.loginStart = function () {
 	            _this.setState({ isLogin: true });
-	        }, _this.loginSucceed = function () {
+	            _this.props.start();
+	        }, _this.loginSuccess = function (data) {
 	            _this.setState({ isLogin: false });
-	        }, _this.loginFailed = function (err) {
+	            _this.props.success(data);
+	        }, _this.loginFail = function (err) {
 	            _this.setState({ errorMsg: err.msg, isLogin: false });
+	            _this.props.fail(err);
 	        }, _this.setWidgetId = function (id) {
 	            _this.widgetId = id;
 	        }, _this.handleEmailChange = function (e) {
@@ -21295,12 +21356,12 @@
 	                _this.recaptchaValue = '';
 	            }
 	            if (submitForm) {
-	                (0, _apiReq2.default)('POST', _this.props.authPath + '/login', data, _this.loginStart, _this.loginSucceed, _this.loginFailed);
+	                (0, _apiReq2.default)('POST', _this.props.authPath + '/login', data, _this.loginStart, _this.loginSuccess, _this.loginFail);
 	            }
 	        }, _temp), _possibleConstructorReturn(_this, _ret);
 	    }
 	
-	    _createClass(LoginContainer, [{
+	    _createClass(Login, [{
 	        key: 'componentWillMount',
 	        value: function componentWillMount() {
 	            this.recaptchaValue = '';
@@ -21340,20 +21401,20 @@
 	        }
 	    }]);
 	
-	    return LoginContainer;
+	    return Login;
 	}(_react2.default.Component);
 	
-	LoginContainer.propTypes = {
+	Login.propTypes = {
 	    recaptcha: _react2.default.PropTypes.bool.isRequired,
 	    sitekey: _react2.default.PropTypes.string.isRequired,
 	    authPath: _react2.default.PropTypes.string.isRequired
 	};
 	;
 	
-	exports.default = LoginContainer;
+	exports.default = Login;
 
 /***/ },
-/* 174 */
+/* 173 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -21366,7 +21427,7 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _Recaptcha = __webpack_require__(175);
+	var _Recaptcha = __webpack_require__(174);
 	
 	var _Recaptcha2 = _interopRequireDefault(_Recaptcha);
 	
@@ -21427,24 +21488,6 @@
 				},
 				props.login.errorMsg
 			),
-			_react2.default.createElement(
-				'button',
-				{
-					className: props.loginClass ? props.loginClass.linkToSignup : '',
-					style: props.loginStyle ? props.loginStyle.linkToSignup : {},
-					type: 'button'
-				},
-				'Signup'
-			),
-			_react2.default.createElement(
-				'button',
-				{
-					className: props.loginClass ? props.loginClass.linkToReset : '',
-					style: props.loginStyle ? props.loginStyle.linkToReset : {},
-					type: 'button'
-				},
-				'Forget password'
-			),
 			_react2.default.createElement('br', null),
 			_react2.default.createElement('input', { type: 'submit', value: 'Submit' })
 		);
@@ -21465,7 +21508,7 @@
 	exports.default = LoginForm;
 
 /***/ },
-/* 175 */
+/* 174 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -21546,7 +21589,7 @@
 	exports.default = Recaptcha;
 
 /***/ },
-/* 176 */
+/* 175 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -21555,7 +21598,7 @@
 		value: true
 	});
 	
-	var _isomorphicFetch = __webpack_require__(177);
+	var _isomorphicFetch = __webpack_require__(176);
 	
 	var _isomorphicFetch2 = _interopRequireDefault(_isomorphicFetch);
 	
@@ -21618,19 +21661,19 @@
 	};
 
 /***/ },
-/* 177 */
+/* 176 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// the whatwg-fetch polyfill installs the fetch() function
 	// on the global object (window or self)
 	//
 	// Return that as the export for use in Webpack, Browserify etc.
-	__webpack_require__(178);
+	__webpack_require__(177);
 	module.exports = self.fetch.bind(self);
 
 
 /***/ },
-/* 178 */
+/* 177 */
 /***/ function(module, exports) {
 
 	(function(self) {
@@ -22067,6 +22110,352 @@
 	  self.fetch.polyfill = true
 	})(typeof self !== 'undefined' ? self : this);
 
+
+/***/ },
+/* 178 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _SignupForm = __webpack_require__(179);
+	
+	var _SignupForm2 = _interopRequireDefault(_SignupForm);
+	
+	var _apiReq = __webpack_require__(175);
+	
+	var _apiReq2 = _interopRequireDefault(_apiReq);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var Signup = function (_React$Component) {
+	    _inherits(Signup, _React$Component);
+	
+	    function Signup() {
+	        var _Object$getPrototypeO;
+	
+	        var _temp, _this, _ret;
+	
+	        _classCallCheck(this, Signup);
+	
+	        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	            args[_key] = arguments[_key];
+	        }
+	
+	        return _ret = (_temp = (_this = _possibleConstructorReturn(this, (_Object$getPrototypeO = Object.getPrototypeOf(Signup)).call.apply(_Object$getPrototypeO, [this].concat(args))), _this), _this.state = {
+	            email: '',
+	            name: '',
+	            password: '',
+	            confirm: '',
+	            emMsg: '',
+	            dnMsg: '',
+	            pwMsg: '',
+	            cpwMsg: '',
+	            errorMsg: '',
+	            isSignup: false
+	        }, _this.signupStart = function () {
+	            _this.setState({ isSignup: true });
+	            _this.props.start();
+	        }, _this.signupSuccess = function (data) {
+	            _this.setState({ isSignup: false });
+	            _this.props.success(data);
+	        }, _this.signupFail = function (err) {
+	            _this.setState({ errorMsg: err.msg, isSignup: false });
+	            _this.props.fail(err);
+	        }, _this.setWidgetId = function (id) {
+	            _this.widgetId = id;
+	        }, _this.handleEmailChange = function (e) {
+	            _this.setState({ email: e.target.value, emMsg: '', errorMsg: '' });
+	        }, _this.handleNameChange = function (e) {
+	            _this.setState({ name: e.target.value, dnMsg: '', errorMsg: '' });
+	        }, _this.handlePasswordChange = function (e) {
+	            _this.setState({ password: e.target.value, pwMsg: '', errorMsg: '' });
+	        }, _this.handleConfirmChange = function (e) {
+	            _this.setState({ confirm: e.target.value, cpwMsg: '', errorMsg: '' });
+	        }, _this.handleRecaptchaDone = function (g) {
+	            _this.recaptchaValue = g;
+	            _this.setState({ errorMsg: '' });
+	        }, _this.handleRecaptchaExpire = function () {
+	            _this.recaptchaValue = 'EXP';
+	        }, _this.handleSubmit = function (e) {
+	            e.preventDefault();
+	            var email = _this.state.email.trim();
+	            var name = _this.state.name.trim();
+	            var password = _this.state.password.trim();
+	            var confirm = _this.state.confirm.trim();
+	            var submitForm = true;
+	            var data = {};
+	
+	            _this.setState({ errorMsg: '', password: '', confirm: '' });
+	            //Check email is correct
+	            if (email.match(/^.{1,50}[@].{1,50}[.].{1,50}$/)) {
+	                _this.setState({ emMsg: '' });
+	            } else if (email) {
+	                submitForm = false;
+	                _this.setState({ emMsg: 'Email address is not in correct format xxx@xxx.xxx' });
+	            } else {
+	                submitForm = false;
+	                _this.setState({ emMsg: 'Email is empty' });
+	            }
+	            //Check display name is correct
+	            if (name) {
+	                _this.setState({ dnMsg: '' });
+	            } else {
+	                submitForm = false;
+	                _this.setState({ dnMsg: 'Display name is empty' });
+	            }
+	            //Check password is correct
+	            if (password.match(/^[\w~!@#$%^&*()\-+=]{8,20}$/)) {
+	                _this.setState({ pwMsg: '' });
+	            } else if (password) {
+	                submitForm = false;
+	                _this.setState({ pwMsg: 'Password needs to be 8-20 characters, and contains only numbers, letters, and special characters' });
+	            } else {
+	                submitForm = false;
+	                _this.setState({ pwMsg: 'Password is empty' });
+	            }
+	            //Check confirm password is correct
+	            if (password !== confirm) {
+	                submitForm = false;
+	                _this.setState({ cpwMsg: 'Password and confirm password are not equal' });
+	            } else if (!confirm) {
+	                submitForm = false;
+	                _this.setState({ cpwMsg: 'Confirm password is empty' });
+	            } else {
+	                _this.setState({ cpwMsg: '' });
+	            }
+	            //Check recaptcha is correct
+	            if (_this.props.recaptcha) {
+	                if (recaptchaValue === 'EXP') {
+	                    submitForm = false;
+	                    _this.setState({ errorMsg: 'Recaptcha expired, please check a new recaptcha' });
+	                } else if (_this.recaptchaValue) {
+	                    _this.setState({ errorMsg: '' });
+	                } else {
+	                    submitForm = false;
+	                    _this.setState({ errorMsg: 'Recaptcha is not checked' });
+	                }
+	                if (submitForm) {
+	                    data._id = email;
+	                    data.dn = name;
+	                    data.pw = password;
+	                    data['g-recaptcha-response'] = _this.recaptchaValue;
+	                }
+	            } else {
+	                data._id = email;
+	                data.dn = name;
+	                data.pw = password;
+	            }
+	
+	            if (_this.recaptchaValue) {
+	                grecaptcha.reset(_this.widgetId);
+	                _this.recaptchaValue = '';
+	            }
+	            if (submitForm) {
+	                (0, _apiReq2.default)('POST', _this.props.authPath + '/signup', data, _this.signupStart, _this.signupSuccess, _this.signupFail);
+	            }
+	        }, _temp), _possibleConstructorReturn(_this, _ret);
+	    }
+	
+	    _createClass(Signup, [{
+	        key: 'componentWillMount',
+	        value: function componentWillMount() {
+	            this.recaptchaValue = '';
+	            this.widgetId = '';
+	        }
+	    }, {
+	        key: 'componentDidMount',
+	        value: function componentDidMount() {}
+	    }, {
+	        key: 'componentWillUnmount',
+	        value: function componentWillUnmount() {
+	            this.setState({
+	                email: '',
+	                name: '',
+	                password: '',
+	                confirm: '',
+	                emMsg: '',
+	                dnMsg: '',
+	                pwMsg: '',
+	                cpwMsg: '',
+	                errorMsg: '',
+	                isSignup: false
+	            });
+	        }
+	    }, {
+	        key: 'render',
+	        value: function render() {
+	            return _react2.default.createElement(_SignupForm2.default, {
+	                signup: this.state,
+	                recaptcha: this.props.recaptcha,
+	                sitekey: this.props.sitekey,
+	                signupStyle: this.props.signupConfig ? this.props.signupConfig.style : {},
+	                signupClass: this.props.signupConfig ? this.props.signupConfig.className : {},
+	                handleSubmit: this.handleSubmit,
+	                handleEmailChange: this.handleEmailChange,
+	                handleNameChange: this.handleNameChange,
+	                handlePasswordChange: this.handlePasswordChange,
+	                handleConfirmChange: this.handleConfirmChange,
+	                handleRecaptchaDone: this.handleRecaptchaDone,
+	                handleRecaptchaExpire: this.handleRecaptchaExpire,
+	                setWidgetId: this.setWidgetId
+	            });
+	        }
+	    }]);
+	
+	    return Signup;
+	}(_react2.default.Component);
+	
+	Signup.propTypes = {
+	    recaptcha: _react2.default.PropTypes.bool.isRequired,
+	    sitekey: _react2.default.PropTypes.string.isRequired,
+	    authPath: _react2.default.PropTypes.string.isRequired
+	};
+	exports.default = Signup;
+
+/***/ },
+/* 179 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _Recaptcha = __webpack_require__(174);
+	
+	var _Recaptcha2 = _interopRequireDefault(_Recaptcha);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var SignupForm = function SignupForm(props) {
+	    return _react2.default.createElement(
+	        'form',
+	        {
+	            className: props.signupClass ? props.signupClass.form : '',
+	            style: props.signupStyle ? props.signupStyle.form : {},
+	            onSubmit: props.handleSubmit
+	        },
+	        _react2.default.createElement('input', {
+	            className: props.signupClass ? props.signupClass.emailBox : '',
+	            style: props.signupStyle ? props.signupStyle.emailBox : {},
+	            type: 'text',
+	            placeholder: 'Email address',
+	            value: props.signup.email,
+	            onChange: props.handleEmailChange
+	        }),
+	        _react2.default.createElement(
+	            'div',
+	            {
+	                className: props.signupClass ? props.signupClass.emailError : '',
+	                style: props.signupStyle ? props.signupStyle.emailError : {}
+	            },
+	            props.signup.emMsg
+	        ),
+	        _react2.default.createElement('br', null),
+	        _react2.default.createElement('input', {
+	            className: props.signupClass ? props.signupClass.nameBox : '',
+	            style: props.signupStyle ? props.signupStyle.nameBox : {},
+	            type: 'text',
+	            placeholder: 'Display name',
+	            value: props.signup.name,
+	            onChange: props.handleNameChange
+	        }),
+	        _react2.default.createElement(
+	            'div',
+	            {
+	                className: props.signupClass ? props.signupClass.nameError : '',
+	                style: props.signupStyle ? props.signupStyle.nameError : {}
+	            },
+	            props.signup.dnMsg
+	        ),
+	        _react2.default.createElement('br', null),
+	        _react2.default.createElement('input', {
+	            className: props.signupClass ? props.signupClass.passwordBox : '',
+	            style: props.signupStyle ? props.signupStyle.passwordBox : {},
+	            type: 'password',
+	            placeholder: 'Password',
+	            value: props.signup.password,
+	            onChange: props.handlePasswordChange
+	        }),
+	        _react2.default.createElement(
+	            'div',
+	            {
+	                className: props.signupClass ? props.signupClass.passwordError : '',
+	                style: props.signupStyle ? props.signupStyle.passwordError : {}
+	            },
+	            props.signup.pwMsg
+	        ),
+	        _react2.default.createElement('br', null),
+	        _react2.default.createElement('input', {
+	            className: props.signupClass ? props.signupClass.confirmBox : '',
+	            style: props.signupStyle ? props.signupStyle.confirmBox : {},
+	            type: 'password',
+	            placeholder: 'Confirm password',
+	            value: props.signup.confirm,
+	            onChange: props.handleConfirmChange
+	        }),
+	        _react2.default.createElement(
+	            'div',
+	            {
+	                className: props.signupClass ? props.signupClass.confirmError : '',
+	                style: props.signupStyle ? props.signupStyle.confirmError : {}
+	            },
+	            props.signup.cpwMsg
+	        ),
+	        props.recaptcha ? _react2.default.createElement(_Recaptcha2.default, {
+	            sitekey: props.sitekey,
+	            handleRecaptchaDone: props.handleRecaptchaDone,
+	            handleRecaptchaExpire: props.handleRecaptchaExpire,
+	            setWidgetId: props.setWidgetId
+	        }) : _react2.default.createElement('div', { id: 'no-recaptcha' }),
+	        _react2.default.createElement(
+	            'div',
+	            {
+	                className: props.signupClass ? props.signupClass.errorMessage : '',
+	                style: props.signupStyle ? props.signupStyle.errorMessage : {}
+	            },
+	            props.signup.errorMsg
+	        ),
+	        _react2.default.createElement('input', { type: 'submit', value: 'Submit' })
+	    );
+	};
+	
+	SignupForm.propTypes = {
+	    signup: _react2.default.PropTypes.object.isRequired,
+	    recaptcha: _react2.default.PropTypes.bool.isRequired,
+	    sitekey: _react2.default.PropTypes.string.isRequired,
+	    handleSubmit: _react2.default.PropTypes.func.isRequired,
+	    handleEmailChange: _react2.default.PropTypes.func.isRequired,
+	    handleNameChange: _react2.default.PropTypes.func.isRequired,
+	    handlePasswordChange: _react2.default.PropTypes.func.isRequired,
+	    handleConfirmChange: _react2.default.PropTypes.func.isRequired,
+	    handleRecaptchaDone: _react2.default.PropTypes.func.isRequired,
+	    handleRecaptchaExpire: _react2.default.PropTypes.func.isRequired,
+	    setWidgetId: _react2.default.PropTypes.func.isRequired
+	};
+	
+	exports.default = SignupForm;
 
 /***/ }
 /******/ ]);

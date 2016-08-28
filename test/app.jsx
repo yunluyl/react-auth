@@ -1,65 +1,198 @@
 'use strict';
 import React from 'react';
 import {render} from 'react-dom';
-import Auth from '../react-lib/Auth';
+import Login from '../react-lib/Login';
+import Signup from '../react-lib/Signup';
 
-const authConfig =
+class Auth extends React.Component
 {
-	authPath : '/auth',
-	recaptcha : false,
-	sitekey : '6LfqHigTAAAAAN3M7N_PRfODACcRtG1WnTnjgbxd',
-	login :
+	state =
 	{
-		style :
+		activePanel : 'login' //login, signup, reset
+	};
+
+	componentWillMount()
+	{
+		this.authPath = '/auth';
+		this.recaptcha = false;
+		this.sitekey = '6LfqHigTAAAAAN3M7N_PRfODACcRtG1WnTnjgbxd';
+
+		this.loginConfig =
 		{
-			form :
+			style :
 			{
+				form :
+				{
 
-			},
-			emailBox :
-			{
+				},
+				emailBox :
+				{
 
-			},
-			emailError :
-			{
-				display: 'inline-block'
-			},
-			passwordBox :
-			{
+				},
+				emailError :
+				{
+					display: 'inline-block'
+				},
+				passwordBox :
+				{
 
+				},
+				passwordError :
+				{
+					display: 'inline-block'
+				},
+				errorMessage :
+				{
+					height: '20px',
+					backgroundColor: 'red'
+				}
 			},
-			passwordError :
+			//or classname
+		};
+
+		this.signupConfig =
+		{
+			style :
 			{
-				display: 'inline-block'
-			},
-			errorMessage :
-			{
-				height: '20px',
-				backgroundColor: 'red'
-			},
-			linkToSignup :
-			{
-				display: 'inline-block'
-			},
-			linkToReset :
-			{
-				marginLeft: '50px',
-				display: 'inline-block'
+				form :
+				{
+
+				},
+				emailBox :
+				{
+
+				},
+				emailError :
+				{
+					display: 'inline-block'
+				},
+				nameBox :
+				{
+
+				},
+				nameError :
+				{
+					display: 'inline-block'
+				},
+				passwordBox :
+				{
+
+				},
+				passwordError :
+				{
+					display: 'inline-block'
+				},
+				confirmBox :
+				{
+
+				},
+				confirmError :
+				{
+					display: 'inline-block'
+				},
+				errorMessage :
+				{
+					height: '20px',
+					backgroundColor: 'red'
+				}
 			}
-		},
-		//or classname
-	},
-	reset :
-	{
-
-	},
-	signup :
-	{
-
+		};
 	}
-};
+
+	loginStart = () =>
+	{
+
+	};
+
+	loginSuccess = (data) =>
+	{
+
+	};
+
+	loginFail = (err) =>
+	{
+
+	};
+
+	signupStart = () =>
+	{
+
+	};
+
+	signupSuccess = (data) =>
+	{
+		this.setState(
+		{
+			activePanel : 'login'
+		});
+	};
+
+	signupFail = (err) =>
+	{
+
+	};
+
+	linkToSignup = (e) =>
+	{
+		this.setState(
+		{
+			activePanel : 'signup'
+		});
+	};
+
+	linkToLogin = (e) =>
+	{
+		this.setState(
+		{
+			activePanel : 'login'
+		});
+	};
+
+	render()
+	{
+		let activePanel;
+		switch (this.state.activePanel)
+		{
+			case 'login':
+				activePanel = (
+					<Login
+						loginConfig = {this.loginConfig}
+						authPath = {this.authPath}
+						recaptcha = {this.recaptcha}
+						sitekey = {this.sitekey}
+						success = {this.loginSuccess}
+						fail = {this.loginFail}
+					/>
+				);
+				break;
+			case 'signup':
+				activePanel = (
+					<Signup
+						signupConfig = {this.signupConfig}
+						authPath = {this.authPath}
+						recaptcha = {this.recaptcha}
+						sitekey = {this.sitekey}
+						success = {this.signupSuccess}
+						fail = {this.signupFail}
+					/>
+				);
+				break;
+			case 'reset':
+				break;
+			default:
+				activePanel = null;
+		}
+		return (
+			<div>
+				{activePanel}
+				<input type='button' onClick={this.linkToSignup} value='Signup' />
+				<input type='button' onClick={this.linkToLogin} value='Login' />
+			</div>
+		);
+	}
+}
 
 render(
-	<Auth authConfig = {authConfig} />,
+	<Auth />,
 	document.getElementById('root')
 );

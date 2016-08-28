@@ -4,7 +4,7 @@ import LoginForm from './LoginForm';
 import apiReq from './apiReq';
 
 
-class LoginContainer extends React.Component
+class Login extends React.Component
 {
     static propTypes =
     {
@@ -28,10 +28,12 @@ class LoginContainer extends React.Component
         this.recaptchaValue = '';
         this.widgetId = '';
     }
+    
     componentDidMount()
     {
         
     }
+
     componentWillUnmount()
     {
         this.setState(
@@ -48,16 +50,19 @@ class LoginContainer extends React.Component
     loginStart = () =>
     {
         this.setState({isLogin : true});
+        this.props.start();
     };
 
-    loginSucceed = () =>
+    loginSuccess = (data) =>
     {
         this.setState({isLogin : false});
+        this.props.success(data);
     };
 
-    loginFailed = (err) =>
+    loginFail = (err) =>
     {
         this.setState({errorMsg : err.msg, isLogin : false});
+        this.props.fail(err);
     };
 
     setWidgetId = (id) =>
@@ -69,19 +74,23 @@ class LoginContainer extends React.Component
     {
         this.setState({email : e.target.value, emMsg : '', errorMsg : ''});
     };
+
     handlePasswordChange = (e) =>
     {
         this.setState({password : e.target.value, pwMsg : '', errorMsg : ''});
     };
+
     handleRecaptchaDone = (g) =>
     {
         this.recaptchaValue = g;
         this.setState({errorMsg : ''});
     };
+
     handleRecaptchaExpire = () =>
     {
         this.recaptchaValue = 'EXP';
     };
+
     handleSubmit = (e) =>
     {
         e.preventDefault();
@@ -149,8 +158,8 @@ class LoginContainer extends React.Component
                 this.props.authPath + '/login',
                 data,
                 this.loginStart,
-                this.loginSucceed,
-                this.loginFailed
+                this.loginSuccess,
+                this.loginFail
             );
         }
     };
@@ -175,4 +184,4 @@ class LoginContainer extends React.Component
     }
 };
 
-export default LoginContainer;
+export default Login;
