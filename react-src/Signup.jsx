@@ -57,19 +57,28 @@ class Signup extends React.Component
     signupStart = () =>
     {
         this.setState({isSignup : true});
-        this.props.start();
+        if (typeof this.props.start !== 'undefined')
+        {
+            this.props.start();
+        }
     };
 
     signupSuccess = (data) =>
     {
         this.setState({isSignup : false});
-        this.props.success(data);
+        if (typeof this.props.success !== 'undefined')
+        {
+            this.props.success(data);
+        }
     };
 
     signupFail = (err) =>
     {
         this.setState({errorMsg : err.msg, isSignup : false});
-        this.props.fail(err);
+        if (typeof this.props.fail !== 'undefined')
+        {
+            this.props.fail(err);
+        }
     };
 
     setWidgetId = (id) =>

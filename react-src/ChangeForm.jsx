@@ -12,7 +12,7 @@ const ChangeForm = (props) =>
 			<input
 				className = {props.changeClass?props.changeClass.oldPwBox:''}
 				style = {props.changeStyle?props.changeStyle.oldPwBox:props.changeClass?{}:{}}
-				type = {props.inReset?'password':'text'}
+				type = {props.inReset?'text':'password'}
 				placeholder = {props.inReset?'Secret token':'Old password'}
 				value = {props.change.oldPassword}
 				onChange = {props.handleOldPasswordChange}

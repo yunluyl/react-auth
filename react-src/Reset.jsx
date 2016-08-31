@@ -49,19 +49,29 @@ class Reset extends React.Component
     resetStart = () =>
     {
         this.setState({isReset : true});
-        this.props.resetStart();
+        if (typeof this.props.resetStart !== 'undefined')
+        {
+            this.props.resetStart();
+        }
     };
 
     resetSuccess = (data) =>
     {
         this.setState({isReset : false, activeForm : 'change'});
-        this.props.resetSuccess(data);
+        if (typeof this.props.resetSuccess !== 'undefined')
+        {
+            this.props.resetSuccess(data);
+        }
     };
 
     resetFail = (err) =>
     {
         this.setState({errorMsg : err.msg, isReset : false});
-        this.props.resetFail(err);
+        delete this.userID;
+        if (typeof this.props.resetFail !== 'undefined')
+        {
+            this.props.resetFail(err);
+        }
     };
 
     setWidgetId = (id) =>
@@ -93,7 +103,7 @@ class Reset extends React.Component
     handleSubmit = (e) =>
     {
         e.preventDefault();
-        let email = this.props.reset.email.trim();
+        let email = this.state.email.trim();
         let submitForm = true;
         let data = {};
         this.setState({errorMsg : ''});
@@ -139,6 +149,7 @@ class Reset extends React.Component
         }
         if (submitForm)
         {
+            this.userID = email;
             apiReq(
                 'POST',
                 this.props.authPath + '/reset',
@@ -158,7 +169,7 @@ class Reset extends React.Component
             case 'reset':
                 activeForm = (
                     <ResetForm
-                        reset={this.props.reset}
+                        reset={this.state}
                         recaptcha={this.props.recaptcha}
                         sitekey={this.props.sitekey}
                         resetStyle={this.props.resetConfig?this.props.resetConfig.style:{}}
@@ -178,6 +189,7 @@ class Reset extends React.Component
                         userID = {this.userID}
                         changeConfig = {this.props.changeConfig}
                         authPath = {this.props.authPath}
+                        start = {this.props.changeStart}
                         success = {this.props.changeSuccess}
                         fail = {this.props.changeFail}
                     />
@@ -187,7 +199,9 @@ class Reset extends React.Component
                 activeForm = null;
         }
         return(
-            {activeForm}
+            <div>
+                {activeForm}
+            </div>
         );
     }
 }

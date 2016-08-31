@@ -7,7 +7,7 @@ class Change extends React.Component
 {
 	static defaultProps =
 	{
-		inReset = false;
+		inReset : false
 	};
 
 	static propTypes =
@@ -45,19 +45,28 @@ class Change extends React.Component
 	changeStart = () =>
 	{
 	    this.setState({isChange : true});
-	    this.props.start();
+	    if (typeof this.props.start !== 'undefined')
+        {
+            this.props.start();
+        }
 	};
 
 	changeSuccess = (data) =>
 	{
 	    this.setState({isChange : false});
-	    this.props.success(data);
+	    if (typeof this.props.success !== 'undefined')
+        {
+            this.props.success(data);
+        }
 	};
 
 	changeFail = (err) =>
 	{
 	    this.setState({errorMsg : err.msg, isChange : false});
-	    this.props.fail(err);
+	    if (typeof this.props.fail !== 'undefined')
+        {
+            this.props.fail(err);
+        }
 	};
 
 	handleOldPasswordChange = (e) =>
@@ -150,6 +159,10 @@ class Change extends React.Component
 		}
 		data.pw = oldPassword;
         data.np = newPassword;
+        if (this.props.inReset)
+        {
+        	data._id = this.props.userID;
+        }
         if (submitForm)
         {
             apiReq(

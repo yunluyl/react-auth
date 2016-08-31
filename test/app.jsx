@@ -3,6 +3,8 @@ import React from 'react';
 import {render} from 'react-dom';
 import Login from '../react-lib/Login';
 import Signup from '../react-lib/Signup';
+import Change from '../react-lib/Change';
+import Reset from '../react-lib/Reset';
 
 class Auth extends React.Component
 {
@@ -187,6 +189,14 @@ class Auth extends React.Component
 				{activePanel}
 				<input type='button' onClick={this.linkToSignup} value='Signup' />
 				<input type='button' onClick={this.linkToLogin} value='Login' />
+				<Reset
+					authPath = {this.authPath}
+					recaptcha = {this.recaptcha}
+					sitekey = {this.sitekey}
+				/>
+				<Change
+					authPath = {this.authPath}
+				/>
 			</div>
 		);
 	}

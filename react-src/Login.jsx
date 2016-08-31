@@ -50,19 +50,28 @@ class Login extends React.Component
     loginStart = () =>
     {
         this.setState({isLogin : true});
-        this.props.start();
+        if (typeof this.props.start !== 'undefined')
+        {
+            this.props.start();
+        }
     };
 
     loginSuccess = (data) =>
     {
         this.setState({isLogin : false});
-        this.props.success(data);
+        if (typeof this.props.success !== 'undefined')
+        {
+            this.props.success(data);
+        }
     };
 
     loginFail = (err) =>
     {
         this.setState({errorMsg : err.msg, isLogin : false});
-        this.props.fail(err);
+        if (typeof this.props.fail !== 'undefined')
+        {
+            this.props.fail(err);
+        }
     };
 
     setWidgetId = (id) =>

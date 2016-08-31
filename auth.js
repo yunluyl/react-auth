@@ -357,7 +357,6 @@ function _signupAfterRecaptcha(req, res, hash)
         })
         .catch(function(e)
         {
-            console.log(e);
             reportErr(res, 'sendEmailErr');
         });
     })
@@ -746,10 +745,11 @@ function _changeLocal(req, res)
             if (user)
             {
                 req.user = user;
+                _changeAfterFindUser(req, res);
             }
             else
             {
-                reportErr(res, 'userNotExist');
+                return reportErr(res, 'userNotExist');
             }
         })
         .catch(function(e)
@@ -757,74 +757,77 @@ function _changeLocal(req, res)
             return reportErr(res, 'getItem');
         });
     }
-    if (req.user)
+    else if (req.user)
     {
-        let updateCondition;
-        if (req.user.hasOwnProperty('pe'))
-        {
-            if (req.user.pe <= new Date().getTime())
-            {
-                return reportErr(res, 'tempTokenExpired');
-            }
-            updateCondition = {$set : {ph : hash}, $unset : {pe : ''}};
-        }
-        else
-        {
-            updateCondition = {$set : {ph : hash}};
-        }
-
-        bcrypt.compareAsync(req.body.pw, user.ph)
-        .then(function(comResult)
-        {
-            if (comResult)
-            {
-                bcrypt.hashAsync(req.body.np, config.saltRounds)
-                .then(function(hash)
-                {
-                    User.updateAsync({_id : req.user._id}, updateCondition)
-                    .then(function(data)
-                    {
-                        if (data.nModified !== 1)
-                        {
-                            throw new Error();
-                        }
-                        else
-                        {
-                            transporter.sendMailAsync(new config.confirmEmail(req.user._id,'passwordChange'))
-                            .then(function(info)
-                            {
-                                return res.status(200).send({});
-                            })
-                            .catch(function(e)
-                            {
-                                return reportErr(res, 'sendEmailErr');
-                            });
-                        }
-                    })
-                    .catch(function(e)
-                    {
-                        return reportErr(res, 'editItem');
-                    });
-                })
-                .catch(function(e)
-                {
-                    return reportErr(res, 'bcryptErr');
-                });
-            }
-            else
-            {
-                return reportErr(res, 'wrongPassword');
-            }
-        })
-        .catch(function(e)
-        {
-            return reportErr(res, 'bcryptErr');
-        });
+        _changeAfterFindUser(req, res);
     }
     else
     {
         reportErr(res, 'notLoggedIn');
     }
+}
+
+function _changeAfterFindUser(req, res)
+{
+    const passwordExp = req.user.hasOwnProperty('pe');
+    if (passwordExp)
+    {
+        if (req.user.pe <= new Date().getTime())
+        {
+            return reportErr(res, 'tempTokenExpired');
+        }
+    }
+
+    bcrypt.compareAsync(req.body.pw, req.user.ph)
+    .then(function(comResult)
+    {
+        if (comResult)
+        {
+            bcrypt.hashAsync(req.body.np, config.saltRounds)
+            .then(function(hash)
+            {
+                let updateCondition = passwordExp ?
+                                      {$set : {ph : hash}, $unset : {pe : ''}} :
+                                      {$set : {ph : hash}};
+                User.updateAsync({_id : req.user._id}, updateCondition)
+                .then(function(data)
+                {
+                    if (data.nModified !== 1)
+                    {
+                        throw new Error();
+                    }
+                    else
+                    {
+                        transporter.sendMailAsync(new config.confirmEmail(req.user._id,'passwordChange'))
+                        .then(function(info)
+                        {
+                            return res.status(200).send({});
+                        })
+                        .catch(function(e)
+                        {
+                            return reportErr(res, 'sendEmailErr');
+                        });
+                    }
+                })
+                .catch(function(e)
+                {
+                    return reportErr(res, 'editItem');
+                });
+            })
+            .catch(function(e)
+            {
+                return reportErr(res, 'bcryptErr');
+            });
+        }
+        else
+        {
+            return reportErr(res, 'wrongPassword');
+        }
+    })
+    .catch(function(e)
+    {
+        return reportErr(res, 'bcryptErr');
+    });
 }
 
 //logout
