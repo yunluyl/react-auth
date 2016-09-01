@@ -1,8 +1,8 @@
 var passport = require('passport');
 var config = require('./config');
+var util = require('./util');
 var nodemailer = require('nodemailer');
 var uuid = require('node-uuid');
-var querystring = require('querystring');
 var https = require('https');
 var promise = require('bluebird');
 var mongoose = promise.promisifyAll(require('mongoose'));
@@ -10,277 +10,84 @@ var bcrypt = promise.promisifyAll(require('bcryptjs'));
 var transporter = promise.promisifyAll(nodemailer.createTransport(config.smtpConfig));
 
 var User = mongoose.model('User');
-var ReqList = mongoose.model('ReqList');
+var reportErr = util.reportErr;
+var verifyCaptcha = util.verifyCaptcha;
 
-//database access for recording number of requests
-function reqLimit(req, res)
+////Authentication functions
+//activation
+module.exports.activate = function(req,res)
 {
-    return new promise(function(resolve, reject)
+    User.findById(req.body._id).lean().execAsync()
+    .then(function(user)
     {
-        ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().execAsync()
-        .then(function(data)
+        if (user)
         {
-            switch (data.length)
+            if (user.hasOwnProperty('et'))
             {
-                case 0:
-                    ReqList.createAsync([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}])
-                    .then(function(data)
+                if (user.et > new Date().getTime())
+                {
+                    if (user.hasOwnProperty('tk'))
                     {
-                        resolve();
-                    })
-                    .catch(function(e)
-                    {
-                        reject(new Error('putItem'));
-                    });
-                    break;
-                case 1:
-                    if (data[0]._id === req.ip)
-                    {
-                        if (data[0].fq >= config.maxReqFromSameIP)
+                        if (req.body.tk === user.tk)
                         {
-                            reject(new Error('tooManyRequestIP'));
-                        }
-                        promise.join(
-                            ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}}),
-                            ReqList.createAsync({_id : req.body._id, fq : 1}),
-                            function(data1, data2)
+                            User.updateAsync({_id : req.body._id}, {$unset : {tk : '', et : ''}})
+                            .then(function(data)
                             {
-                                if (data1.nModified !== 1)
+                                if (data.nModified !== 1)
                                 {
                                     throw new Error();
                                 }
                                 else
                                 {
-                                    resolve();
+                                    transporter.sendMailAsync(new config.confirmEmail(req.body._id,'activationConfirm'))
+                                    .then(function(info)
+                                    {
+                                        res.status(200).send({});
+                                    })
+                                    .catch(function(e)
+                                    {
+                                        reportErr(res, 'sendEmailErr');
+                                    });
                                 }
-                            }
-                        )
-                        .catch(function(e)
-                        {
-                            reject(new Error('putItem'));
-                        });
-                    }
-                    else if (data[0]._id === req.body._id)
-                    {
-                        if (data[0].fq >= config.maxReqFromSameUser)
-                        {
-                            reject(new Error('tooManyRequestUser'));
-                        }
-                        promise.join(
-                            ReqList.updateAsync({_id : req.body._id}, {$inc : {fq : 1}}),
-                            ReqList.createAsync({_id : req.ip, fq : 1}),
-                            function(data1, data2)
+                            })
+                            .catch(function(e)
                             {
-                                if (data1.nModified !== 1)
-                                {
-                                    throw new Error();
-                                }
-                                else
-                                {
-                                    resolve();
-                                }
-                            }
-                        )
-                        .catch(function(e)
-                        {
-                            reject(new Error('putItem'));
-                        });
-                    }
-                    else
-                    {
-                        reject(new Error('getItem'));
-                    }
-                    break;
-                case 2:
-                    if (data[0]._id === req.body._id && data[1]._id === req.ip)
-                    {
-                        if (data[0].fq >= config.maxReqFromSameUser)
-                        {
-                            reject(new Error('tooManyRequestUser'));
-                        }
-                        if (data[1].fq >= config.maxReqFromSameIP)
-                        {
-                            reject(new Error('tooManyRequestIP'));
-                        }
-                    }
-                    else if (data[0]._id === req.ip && data[1]._id === req.body._id)
-                    {
-                        if (data[1].fq >= config.maxReqFromSameUser)
-                        {
-                            reject(new Error('tooManyRequestUser'));
-                        }
-                        if (data[0].fq >= config.maxReqFromSameIP)
-                        {
-                            reject(new Error('tooManyRequestIP'));
-                        }
-                    }
-                    else
-                    {
-                        reject(new Error('editItem'));
-                    }
-                    ReqList.updateAsync({$or : [{_id : req.body._id},{_id : req.ip}]}, {$inc : {fq : 1}}, {multi : true})
-                    .then(function(data)
-                    {
-                        if (data.nModified !== 2)
-                        {
-                            throw new Error();
+                                return reportErr(res, 'editItem');
+                            });
                         }
                         else
                         {
-                            resolve();
+                            return reportErr(res, 'activationTokenNotMatch');
                         }
-                    })
-                    .catch(function(e)
+                    }
+                    else
                     {
-                        reject(new Error('editItem'));
-                    });
-                    break;
-                default:
-                    reject(new Error('getItem'));
-            }
-        })
-        .catch(function(e)
-        {
-            reject(new Error('getItem'));
-        })
-    });
-}
-
-////Utility functions
-//centralized error report function
-function reportErr(res, errorName)
-{
-    var message;
-    var statusCode;
-    if (typeof config.message[errorName] == 'undefined')
-    {
-        message = errorName;
-        statusCode = 500;
-    }
-    else
-    {
-        message = config.message[errorName].msg;
-        statusCode = config.message[errorName].status;
-    }
-    return res.status(statusCode).send({err : errorName, msg : message});
-}
-
-//verify the recaptcha value submitted by the user is correct
-function verifyCaptcha(req)
-{
-    return new promise(function(resolve, reject)
-    {
-        var post_data = querystring.stringify
-        ({
-            secret : process.env.RECAPTCHA_KEY,
-            response : req.body['g-recaptcha-response'],
-            remoteip : req.ip
-        });
-        var post_options =
-        {
-            host : 'www.google.com',
-            path : '/recaptcha/api/siteverify',
-            method : 'POST',
-            headers :
-            {
-                'Content-Type' : 'application/x-www-form-urlencoded',
-                'Content-Length' : Buffer.byteLength(post_data)
-            }
-        }
-        var post_req = https.request(post_options, function(res)
-        {
-            res.setEncoding('utf8');
-            res.on('data', function(chunk)
-            {
-                resolve(chunk);
-            });
-            res.on('error', function(error)
-            {
-                reject(new Error(error));
-            });
-        });
-        post_req.write(post_data);
-        post_req.end();
-    });
-}
-
-////Authentication functions
-//render activate page
-module.exports.activate = function(req,res) {
-    User.findById(req.query._id).lean().exec(function(err1, data1)
-    {
-        if (err1) {
-            res.render('notification',{title: 'Travel plan account activation', message : config.message['getItem']});
-        }
-        else {
-            if (data1) {
-                if (data1.hasOwnProperty('et')) {
-                    if (data1.et > new Date().getTime()) {
-                        if (data1.hasOwnProperty('tk')) {
-                            if (req.query.tk === data1.tk) {
-                                User.update({_id : req.query._id}, {$unset : {tk : '', et : ''}}, function(err2, data2)
-                                {
-                                    if (err2 || data2.nModified !== 1) {
-                                        res.render('notification',{title: 'Travel plan account activation', message: config.message['editItem']});
-                                    }
-                                    else {
-                                        transporter.sendMail(new config.confirmEmail(req.query._id,'activationConfirm'), function(err3,info) {
-                                            if (err3) {
-                                                res.render('notification',{title: 'Travel plan account activation', message: config.message['sendEmailErr']}); //activation finished, but send email failed
-                                            }
-                                            else {
-                                                res.render('notification',{title: 'Travel plan account activation', message : config.message['activationDone']});
-                                            }
-                                        })
-                                    }
-                                });
-                            }
-                            else {
-                                res.render('notification',{title: 'Travel plan account activation', message : config.message['activationTokenNotMatch']});
-                            }
-                        }
-                        else {
-                            res.render('notification',{title: 'Travel plan account activation', message : config.message['noActivationToken']});
-                        }
-                    }
-                    else {
-                        res.render('notification',{title: 'Travel plan account activation', message : config.message['activateTokenExpired']});
+                        return reportErr(res, 'noActivationToken');
                     }
                 }
-                else {
-                    res.render('notification',{title: 'Travel plan account activation', message : config.message['userHasActivated'].replace(/[%][s]/,req.query._id)});
+                else
+                {
+                    return reportErr(res, 'activateTokenExpired');
                 }
             }
-            else {
-                res.render('notification',{title: 'Travel plan account activation', message : config.message['userNotExist'].replace(/[%][s]/,req.query._id)});
+            else
+            {
+                return reportErr(res, 'userHasActivated');
             }
         }
+        else
+        {
+            return reportErr(res, 'userNotExist');
+        }
+    })
+    .catch(function(e)
+    {
+        return reportErr(res, 'getItem');
     });
 }
 
-//signup wrapper
+//signup
 module.exports.signup = function(req, res)
-{
-    if (config.limitReqRate)
-    {
-        reqLimit(req, res)
-        .then(function()
-        {
-            _signupLocal(req, res);
-        })
-        .catch(function(e)
-        {
-            return reportErr(res, e.message);
-        });
-    }
-    else
-    {
-        _signupLocal(req, res);
-    }
-}
-
-//signup function
-function _signupLocal(req, res)
 {
     if (req.body._id.length > config.maxInputTextLength || req.body.dn.length > config.maxInputTextLength || req.body.pw.length > config.maxInputTextLength)
     {
@@ -306,7 +113,7 @@ function _signupLocal(req, res)
                         return reportErr(res, 'recaptchaVerifyFailed');
                     }
                 })
-                .catch(function(err)
+                .catch(function(e)
                 {
                     return reportErr(res, 'recaptchaRequestErr');
                 });
@@ -375,27 +182,6 @@ function _signupAfterRecaptcha(req, res, hash)
 
 //login
 module.exports.login = function(req, res, next) 
-{
-    if (config.limitReqRate)
-    {
-        reqLimit(req, res)
-        .then(function()
-        {
-            _loginLocal(req, res, next);
-        })
-        .catch(function(e)
-        {
-            return reportErr(res, e.message);
-        });
-    }
-    else
-    {
-        _loginLocal(req, res, next);
-    }
-}
-
-//local login function
-function _loginLocal(req, res, next)
 {
     if (req.body._id.length > config.maxInputTextLength || req.body.pw.length > config.maxInputTextLength)
     {
@@ -531,29 +317,8 @@ module.exports.deserializeUser = function(id, callback)
     });
 }
 
-//reset password wrapper to limit the number of reset requests
+//reset password
 module.exports.resetPassword = function(req, res)
-{
-    if (config.limitReqRate)
-    {
-        reqLimit(req, res)
-        .then(function()
-        {
-            return _resetLocal(req, res);
-        })
-        .catch(function(e)
-        {
-            return reportErr(res, e.message);
-        });
-    }
-    else
-    {
-        return _resetLocal(req, res);
-    }
-}
-
-//api function serves reset password requests
-function _resetLocal(req, res)
 {
     if (req.body._id.length > config.maxInputTextLength)
     {
@@ -655,83 +420,43 @@ function _resetAfterRecaptcha(req, res)
 //resend activation email
 module.exports.resendEmail = function(req, res)
 {
-    if (req.user)
+    if (req.user.hasOwnProperty('tk'))
     {
-        if (req.user.hasOwnProperty('tk'))
+        var token = uuid.v4();
+        var expirationTime = new Date().getTime() + config.activationLinkExpireTime;
+        User.updateAsync({_id : req.user._id}, {$set : {tk : token, et : expirationTime}})
+        .then(function(data)
         {
-            var token = uuid.v4();
-            var expirationTime = new Date().getTime() + config.activationLinkExpireTime;
-            User.update({_id : req.user._id}, {$set : {tk : token, et : expirationTime}}, function(err1, data1)
+            if (data.nModified !== 1)
             {
-                if (err1 || data1.nModified !== 1)
-                {
-                    res.status(500).send(
-                    {
-                        msg : config.message.putItem
-                    });
-                    //res.redirect(302, '/plans?resendMsg=putItem');
-                }
-                else
-                {
-                    transporter.sendMail(new config.activationEmail(req.user._id, token), function(err2, info)
-                    {
-                        if (err2)
-                        {
-                            res.status(400).send(
-                            {
-                                msg : config.message.sendEmailErr
-                            });
-                            //res.redirect(302, '/plans?resendMsg=sendEmailErr');
-                        }
-                        else
-                        {
-                            res.status(200).send({});
-                            //res.redirect(302, '/plans?resendMsg=resendEmail');
-                        }
-                    });
-                }
-            });
-        }
-        else {
-            res.status(400).send(
+                throw new Error();
+            }
+            else
             {
-                msg : config.message.userHasActivated
-            });
-            //res.redirect(302, '/plans?resendMsg=userHasActivated');
-        }
-    }
-    else {
-        res.status(400).send(
+                transporter.sendMailAsync(new config.activationEmail(req.user._id, token))
+                .then(function(info)
+                {
+                    res.status.send({});
+                })
+                .catch(function(e)
+                {
+                    return reportErr(res, 'sendEmailErr');
+                });
+            }
+        })
+        .catch(function(e)
         {
-            redirect : '/login',
-            msg : config.message.notLoggedIn
+            return reportErr(res, 'putItem');
         });
-        //res.redirect(302, '/login?err=notLoggedIn'); //redirect to user login
+    }
+    else
+    {
+        return reportErr(res, 'userHasActivated');
     }
 }
 
 //change password
 module.exports.changePassword = function(req, res)
-{
-    if (config.limitReqRate)
-    {
-        reqLimit(req, res)
-        .then(function()
-        {
-            return _changeLocal(req, res);
-        })
-        .catch(function(e)
-        {
-            return reportErr(res, e.message);
-        });
-    }
-    else
-    {
-        return _changeLocal(req, res);
-    }
-}
-
-function _changeLocal(req, res)
 {
     if (req.body.pw.length > config.maxInputTextLength || req.body.np.length > config.maxInputTextLength)
     {

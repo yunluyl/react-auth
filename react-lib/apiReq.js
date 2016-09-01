@@ -27,9 +27,6 @@ exports.default = function (method, path, data, start, success, fail) {
 				return response.json().then(function (json) {
 					success(json);
 					console.log('succeeded!');
-					if (json.hasOwnProperty('redirect')) {
-						browserHistory.push(json.redirect);
-					}
 				});
 			}
 			//possible other types

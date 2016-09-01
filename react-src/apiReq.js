@@ -26,10 +26,6 @@ export default (method, path, data, start, success, fail) =>
 	    		{
 	    			success(json);
 	    			console.log('succeeded!');
-	    			if (json.hasOwnProperty('redirect'))
-	    			{
-	    				browserHistory.push(json.redirect);
-	    			}
 	    		});
 	    	}
 	    	//possible other types

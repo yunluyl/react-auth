@@ -5,6 +5,7 @@ import Login from '../react-lib/Login';
 import Signup from '../react-lib/Signup';
 import Change from '../react-lib/Change';
 import Reset from '../react-lib/Reset';
+import Activate from '../react-lib/Activate';
 
 class Auth extends React.Component
 {
@@ -197,6 +198,7 @@ class Auth extends React.Component
 				<Change
 					authPath = {this.authPath}
 				/>
+				<Activate />
 			</div>
 		);
 	}

@@ -75,7 +75,7 @@ module.exports.message = {
     userHasActivated :
     {
         status : 400,
-        msg : 'ERROR: User %s has been activated before'
+        msg : 'ERROR: User has been activated before'
     },
     userNotExist :
     {
@@ -192,7 +192,7 @@ module.exports.activationEmail = function(sendto,token) {
     this.from = consts.emailSender;
     this.to = sendto;
     this.subject = 'Account activation';
-    this.text = 'https://travelplanserver.herokuapp.com/activate?_id='+sendto+'&tk='+token;
+    this.text = 'https://localhost:3000/?_id='+sendto+'&tk='+token;
 };
 
 module.exports.resetEmail = function(sendto,tempPassword) {
