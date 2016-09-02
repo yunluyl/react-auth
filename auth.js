@@ -436,7 +436,7 @@ module.exports.resendEmail = function(req, res)
                 transporter.sendMailAsync(new config.activationEmail(req.user._id, token))
                 .then(function(info)
                 {
-                    res.status.send({});
+                    res.status(200).send({});
                 })
                 .catch(function(e)
                 {
@@ -569,4 +569,16 @@ module.exports.logout = function(req, res)
             res.status(200).send({});
         }
     });
+}
+
+module.exports.isActive = function(req, res)
+{
+    if (req.user.hasOwnProperty('tk'))
+    {
+        res.status(200).send({active : false});
+    }
+    else
+    {
+        res.status(200).send({active : true});
+    }
 }

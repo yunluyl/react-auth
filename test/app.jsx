@@ -6,6 +6,8 @@ import Signup from '../react-lib/Signup';
 import Change from '../react-lib/Change';
 import Reset from '../react-lib/Reset';
 import Activate from '../react-lib/Activate';
+import Logout from '../react-lib/Logout';
+import Resend from '../react-lib/Resend';
 
 class Auth extends React.Component
 {
@@ -199,6 +201,8 @@ class Auth extends React.Component
 					authPath = {this.authPath}
 				/>
 				<Activate />
+				<Logout />
+				<Resend />
 			</div>
 		);
 	}

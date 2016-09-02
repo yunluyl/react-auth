@@ -10,13 +10,26 @@ module.exports.reqLimit = function(req, res)
 {
     return new promise(function(resolve, reject)
     {
+        if (!req.body.hasOwnProperty('_id') && req.user)
+        {
+            req.body._id = req.user._id;
+        }
         ReqList.find({$or : [{_id : req.body._id}, {_id : req.ip}]}).lean().execAsync()
         .then(function(data)
         {
             switch (data.length)
             {
                 case 0:
-                    ReqList.createAsync([{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}])
+                    let createElements;
+                    if (req.body.hasOwnProperty('_id'))
+                    {
+                        createElements = [{_id : req.body._id, fq : 1}, {_id : req.ip, fq : 1}];
+                    }
+                    else
+                    {
+                        createElements = {_id : req.ip, fq : 1};
+                    }
+                    ReqList.createAsync(createElements)
                     .then(function(data)
                     {
                         resolve();
@@ -33,12 +46,34 @@ module.exports.reqLimit = function(req, res)
                         {
                             reject(new Error('tooManyRequestIP'));
                         }
-                        promise.join(
-                            ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}}),
-                            ReqList.createAsync({_id : req.body._id, fq : 1}),
-                            function(data1, data2)
+                        if (req.body.hasOwnProperty('_id'))
+                        {
+                            promise.join(
+                                ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}}),
+                                ReqList.createAsync({_id : req.body._id, fq : 1}),
+                                function(data1, data2)
+                                {
+                                    if (data1.nModified !== 1)
+                                    {
+                                        throw new Error();
+                                    }
+                                    else
+                                    {
+                                        resolve();
+                                    }
+                                }
+                            )
+                            .catch(function(e)
                             {
-                                if (data1.nModified !== 1)
+                                reject(new Error('putItem'));
+                            });
+                        }
+                        else
+                        {
+                            ReqList.updateAsync({_id : req.ip}, {$inc : {fq : 1}})
+                            .then(function(data)
+                            {
+                                if (data.nModified !== 1)
                                 {
                                     throw new Error();
                                 }
@@ -46,12 +81,12 @@ module.exports.reqLimit = function(req, res)
                                 {
                                     resolve();
                                 }
-                            }
-                        )
-                        .catch(function(e)
-                        {
-                            reject(new Error('putItem'));
-                        });
+                            })
+                            .catch(function(e)
+                            {
+                                reject(new Error('putItem'));
+                            });
+                        }
                     }
                     else if (data[0]._id === req.body._id)
                     {

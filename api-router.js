@@ -50,5 +50,6 @@ router.use(function(req, res, next)
 //protected api
 router.post('/logout', auth.logout);
 router.post('/resend', auth.resendEmail);
+router.get('/isactive', auth.isActive);
 
 module.exports = router;
